@@ -8,6 +8,7 @@ loadEnvConfig(path.resolve(__dirname, "../.."));
 const apiUrl = process.env.API_INTERNAL_URL ?? "http://localhost:4000";
 
 const nextConfig: NextConfig = {
+  agentRules: false,
   // The browser only talks to the web origin, so auth cookies set later are
   // first-party and keep working in Safari on phones.
   async rewrites() {
