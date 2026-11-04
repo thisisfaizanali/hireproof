@@ -20,6 +20,8 @@ npm install
 npm run dev
 ```
 
+If port 5432 is already in use on your machine, set `POSTGRES_PORT` in `.env` and use the same port in `DATABASE_URL`.
+
 The web app runs on http://localhost:3000 and the API on http://localhost:4000. The home page shows the API health result, fetched through the web app's `/api` proxy.
 
 ## Layout

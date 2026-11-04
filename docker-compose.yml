@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hireproof_local_only}
       POSTGRES_DB: ${POSTGRES_DB:-hireproof}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - db-data:/var/lib/postgresql
     healthcheck:
