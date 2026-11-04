@@ -23,9 +23,7 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   // is logged and reported generically so internals never reach the response.
   if (status >= 500) console.error(err);
   const message =
-    status < 500 && err.message
-      ? err.message
-      : "Internal server error";
+    status < 500 && err.message ? err.message : "Internal server error";
   res.status(status).json({
     error: message,
     ...(process.env.NODE_ENV !== "production" && status >= 500

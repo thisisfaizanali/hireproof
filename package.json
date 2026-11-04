@@ -8,7 +8,23 @@
     "apps/*",
     "packages/*"
   ],
+  "scripts": {
+    "build:shared": "npm run build -w @hireproof/shared",
+    "dev": "npm run build:shared && concurrently -k -n shared,api,web \"npm run dev -w @hireproof/shared\" \"npm run dev -w @hireproof/api\" \"npm run dev -w @hireproof/web\"",
+    "build": "npm run build:shared && npm run build -w @hireproof/api -w @hireproof/web",
+    "lint": "eslint .",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "test": "npm run build:shared && npm test --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
   "devDependencies": {
-    "typescript": "^7.0.2"
+    "@eslint/js": "^9.39.5",
+    "concurrently": "^10.0.6",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
   }
 }
