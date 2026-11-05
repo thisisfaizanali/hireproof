@@ -28,7 +28,6 @@ export const LoginInput = z.object({
     .pipe(z.email("Enter a valid email address")),
   password: z
     .string()
-    .trim()
     .min(1, "Enter your password")
     .max(200, "Password is too long"),
 });

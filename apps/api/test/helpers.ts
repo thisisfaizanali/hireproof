@@ -5,13 +5,14 @@ import { app } from "../src/app";
 import { prisma } from "../src/db";
 
 export const PASSWORD = "correct-horse-1";
-const passwordHash = bcrypt.hashSync(PASSWORD, 4);
+const hash = (password: string) => bcrypt.hashSync(password, 4);
+const passwordHash = hash(PASSWORD);
 
 export async function resetDb() {
   await prisma.$executeRaw`TRUNCATE "AuditEvent", "Session", "User", "Client" CASCADE`;
 }
 
-export async function createUser(role: Role) {
+export async function createUser(role: Role, password?: string) {
   const client =
     role === "CLIENT_HM"
       ? await prisma.client.create({
@@ -23,7 +24,7 @@ export async function createUser(role: Role) {
       email: `${role.toLowerCase()}@example.test`,
       name: "Test User",
       role,
-      passwordHash,
+      passwordHash: password ? hash(password) : passwordHash,
       clientId: client?.id,
     },
   });

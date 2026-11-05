@@ -51,6 +51,18 @@ describe("POST /api/auth/login", () => {
     expect(wrongPassword.headers["set-cookie"]).toBeUndefined();
   });
 
+  it("keeps the password exactly as typed, spaces included", async () => {
+    const user = await createUser("RECRUITER", "  spaced out  ");
+    const exact = await request(app)
+      .post("/api/auth/login")
+      .send({ email: user.email, password: "  spaced out  " });
+    const trimmed = await request(app)
+      .post("/api/auth/login")
+      .send({ email: user.email, password: "spaced out" });
+    expect(exact.status).toBe(200);
+    expect(trimmed.status).toBe(401);
+  });
+
   it("rejects a body that fails validation", async () => {
     const res = await request(app)
       .post("/api/auth/login")
