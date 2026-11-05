@@ -115,11 +115,12 @@ describe("GET /api/auth/me", () => {
     expect(res.body).toMatchObject({ id: user.id, role: "DELIVERY_HEAD" });
   });
 
-  it("rejects an expired session", async () => {
+  it("rejects an expired session and deletes it", async () => {
     const { cookie } = await loginAs("RECRUITER");
     await prisma.session.updateMany({ data: { expiresAt: new Date(0) } });
     const res = await request(app).get("/api/auth/me").set("Cookie", cookie);
     expect(res.status).toBe(401);
+    expect(await prisma.session.count()).toBe(0);
   });
 });
 

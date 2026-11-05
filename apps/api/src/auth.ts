@@ -47,7 +47,13 @@ async function findSession(token: unknown) {
     where: { tokenHash: hashToken(token) },
     include: { user: { include: { client: true } } },
   });
-  return session && session.expiresAt > new Date() ? session : null;
+  if (!session) return null;
+  if (session.expiresAt <= new Date()) {
+    // deleteMany so a concurrent request deleting the same row is not an error.
+    await prisma.session.deleteMany({ where: { id: session.id } });
+    return null;
+  }
+  return session;
 }
 
 export const requireAuth: RequestHandler = async (req, res, next) => {
