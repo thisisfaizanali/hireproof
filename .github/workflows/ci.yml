@@ -8,6 +8,23 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      PORT: 4000
+      DATABASE_URL: postgresql://hireproof:hireproof_ci@localhost:5432/hireproof_test
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: hireproof
+          POSTGRES_PASSWORD: hireproof_ci
+          POSTGRES_DB: hireproof_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hireproof -d hireproof_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -15,6 +32,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - run: npx prisma migrate deploy
+        working-directory: apps/api
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck

@@ -16,7 +16,10 @@
     "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
     "test": "npm run build:shared && npm test --workspaces --if-present",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:migrate": "npm run db:migrate -w @hireproof/api",
+    "db:seed": "npm run db:seed -w @hireproof/api",
+    "db:reset": "npm run db:reset -w @hireproof/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

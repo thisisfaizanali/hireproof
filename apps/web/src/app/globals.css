@@ -1,1 +1,7 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Furrow (deal 2/3, seed work-tool-recruiters-scanning-e08d·96cdd6af·2026-11-05·r0)
+ * nav: sidebar on desktop, top bar with menu on phones · signature: the scored candidate row (score, quoted evidence, next action) · states: empty, submitting, error
+ * axes: light/grotesk-sans/warm · posture: committed · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V4 · weakest: S, the shell is plain by intent; the weight moves to the candidate row in later screens */
 @import "tailwindcss";
+@import "./tokens.css";
+@import "./base.css" layer(base);

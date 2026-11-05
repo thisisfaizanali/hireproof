@@ -1,0 +1,66 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Industry {
+  IT_SERVICES
+  BANKING_BACK_OFFICE
+  RETAIL
+}
+
+enum Role {
+  RECRUITER
+  CLIENT_HM
+  DELIVERY_HEAD
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  industry  Industry
+  createdAt DateTime @default(now())
+  users     User[]
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  role         Role
+  clientId     String?
+  client       Client?      @relation(fields: [clientId], references: [id])
+  createdAt    DateTime     @default(now())
+  sessions     Session[]
+  auditEvents  AuditEvent[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String?
+  entityId   String?
+  meta       Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

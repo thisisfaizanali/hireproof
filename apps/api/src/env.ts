@@ -3,10 +3,12 @@ import { z } from "zod";
 const Env = z.object({
   PORT: z.coerce.number().int().positive(),
   DATABASE_URL: z.string().min(1),
-  NODE_ENV: z.string().optional(),
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
 });
 
-export function loadEnv(source: NodeJS.ProcessEnv = process.env) {
+function loadEnv(source: NodeJS.ProcessEnv = process.env) {
   const result = Env.safeParse(source);
   if (!result.success) {
     const lines = result.error.issues.map(
@@ -16,3 +18,5 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env) {
   }
   return result.data;
 }
+
+export const env = loadEnv();

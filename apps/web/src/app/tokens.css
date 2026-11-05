@@ -1,0 +1,84 @@
+@theme static {
+  /* Type scale, ratio 1.2 from a 16px body. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.2rem;
+  --text-xl: 1.44rem;
+  --text-2xl: 1.728rem;
+  --text-display: 1.44rem;
+  --text-section: 1.2rem;
+  --text-title: 1rem;
+
+  --font-display: var(--font-red-hat-display), ui-sans-serif, sans-serif;
+  --font-sans: var(--font-red-hat-text), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-red-hat-mono), ui-monospace, monospace;
+  --tracking-display: -0.02em;
+
+  /* Surfaces and ink. */
+  --color-background: oklch(96% 0.011 85);
+  --color-card: oklch(99.5% 0.005 85);
+  --color-popover: var(--color-card);
+  --color-muted: oklch(92% 0.016 85);
+  --color-foreground: oklch(18% 0.006 60);
+  --color-card-foreground: var(--color-foreground);
+  --color-popover-foreground: var(--color-foreground);
+  --color-muted-foreground: oklch(44% 0.012 60);
+  --color-border: oklch(88% 0.013 85);
+  --color-input: oklch(62% 0.012 60);
+
+  /* The one accent: fills for the primary action and the current selection. */
+  --color-primary: oklch(70% 0.19 40);
+  --color-primary-foreground: oklch(18% 0.006 60);
+  --color-primary-soft: oklch(91% 0.05 50);
+  --color-ring: oklch(60% 0.19 40);
+
+  /* Hover surface for quiet controls. */
+  --color-accent: oklch(92% 0.016 85);
+  --color-accent-foreground: var(--color-foreground);
+  --color-secondary: var(--color-card);
+  --color-secondary-foreground: var(--color-foreground);
+
+  /* Semantic states. Text colours are tuned to hold AA on the soft fills. */
+  --color-success: oklch(45% 0.12 150);
+  --color-success-soft: oklch(93% 0.045 150);
+  --color-warning: oklch(45% 0.1 75);
+  --color-warning-soft: oklch(94% 0.06 90);
+  --color-destructive: oklch(50% 0.19 27);
+  --color-destructive-soft: oklch(94% 0.03 25);
+  /* Uncertain AI output that a recruiter must confirm. */
+  --color-review: oklch(46% 0.12 255);
+  --color-review-soft: oklch(93% 0.03 255);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Only floating layers (menus, popovers) are lifted. */
+  --shadow-pop:
+    0 1px 2px oklch(18% 0.006 60 / 0.1),
+    0 12px 24px -12px oklch(18% 0.006 60 / 0.3);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root {
+  color-scheme: light;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --gutter: 24px;
+  --shell-width: 72rem;
+  --sidebar-width: 15rem;
+  --display-weight: 600;
+}
+@media (max-width: 40rem) {
+  :root {
+    --gutter: 16px;
+  }
+}
