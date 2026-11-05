@@ -5,6 +5,7 @@ import { auth } from "./auth";
 import { clients } from "./clients";
 import { env } from "./env";
 import { health } from "./health";
+import { requisitions } from "./requisitions";
 
 export const app = express();
 
@@ -30,6 +31,7 @@ app.use("/api", (req, res, next) => {
 app.use(health);
 app.use(auth);
 app.use(clients);
+app.use(requisitions);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
