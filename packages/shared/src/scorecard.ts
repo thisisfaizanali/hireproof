@@ -189,7 +189,7 @@ export const RequisitionPatch = z
   });
 export type RequisitionPatch = z.infer<typeof RequisitionPatch>;
 
-const keep = (char: string) => /[p{L}p{N}]/u.test(char);
+const keep = (char: string) => /[\p{L}\p{N}]/u.test(char);
 
 // Locates a quote inside the text, ignoring case, spacing, punctuation and
 // quote styles. Returns offsets into the original text, or null.
