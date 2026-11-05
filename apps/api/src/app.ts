@@ -14,6 +14,18 @@ app.use(helmet());
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
 
+// SameSite=Lax keeps the session cookie off cross-site POSTs. This also rejects
+// state-changing requests that are not JSON, since a cross-site page cannot send
+// application/json without a CORS preflight, which this API never approves.
+app.use("/api", (req, res, next) => {
+  const isJson = /^application\/json\b/i.test(req.get("content-type") ?? "");
+  if (req.method === "GET" || req.method === "HEAD" || isJson) {
+    next();
+    return;
+  }
+  res.status(415).json({ error: "Content-Type must be application/json" });
+});
+
 app.use(health);
 app.use(auth);
 
