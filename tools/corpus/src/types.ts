@@ -71,6 +71,8 @@ export interface Candidate {
   statedExperience?: string;
   projects?: { name: string; desc: string }[];
   certifications?: string[];
+  /** Extra titled sections, for example key achievements. */
+  extras?: { title: string; items: string[] }[];
   personal?: Personal;
   photo?: boolean;
   noticeText?: string;

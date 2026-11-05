@@ -331,6 +331,36 @@ export const sridhar: Candidate = senior({
     "TOGAF 9 Foundation",
     "Oracle Certified Professional, Java SE 8",
   ],
+  extras: [
+    {
+      title: "Key Achievements",
+      items: [
+        "Led the migration of a 1.1 million line claims engine from EJB to Spring Boot services with no unplanned downtime across 9 production cutovers.",
+        "Defined a reference architecture adopted by 5 delivery teams; onboarding time for new services dropped from 6 weeks to 10 days.",
+        "Saved about 1.4 crore a year in hosting and licence cost across two programmes through right sizing and server consolidation.",
+        "Introduced contract testing and consumer driven API reviews, reducing integration defects found in UAT by 45%.",
+        "Built and mentored a group of 6 tech leads, 4 of whom were promoted within two years.",
+        "Delivered a payments proof of concept on Kafka in 5 weeks that moved into production the following quarter.",
+        "Presented the programme architecture to the client board and secured a 12 month extension worth 18 crore.",
+      ],
+    },
+    {
+      title: "Talks and Writing",
+      items: [
+        "Speaker, internal engineering summit 2024: Evolving a monolith without a rewrite.",
+        "Speaker, Bengaluru Java user group 2023: Failure handling in event driven payments.",
+        "Author, internal engineering blog: 14 posts on API design, resilience and cost control.",
+      ],
+    },
+    {
+      title: "Programme Experience",
+      items: [
+        "Core banking modernisation (2022 to date): 60 engineers, 5 teams, 3 integration vendors, 14 month first phase.",
+        "Marketplace re-platforming (2019 to 2022): 14 engineers, 18 services, 3 million monthly users.",
+        "Claims engine rewrite (2015 to 2018): 7 engineers, 2 major releases, 4 regional rollouts.",
+      ],
+    },
+  ],
   personal: {
     dob: "14 July 1990",
     maritalStatus: "Married",
