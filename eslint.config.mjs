@@ -13,6 +13,7 @@ export default defineConfig([
     "**/.next/",
     "**/next-env.d.ts",
     "**/coverage/",
+    "apps/api/src/generated/",
   ]),
   js.configs.recommended,
   tseslint.configs.recommended,
