@@ -3,21 +3,22 @@ import { chromium, type Browser, type Page } from "playwright";
 
 /** Fixed so that regenerating produces the same bytes. */
 const FIXED_DATE = new Date("2026-10-15T09:00:00Z");
-const A4_PX = { width: 794, height: 1123 };
-/** 150 dpi equivalent: A4 at 96 css px per inch scaled by 150/96. */
-const SCAN_SCALE = 150 / 96;
+export const A4_PX = { width: 794, height: 1123 };
+/** 150 dpi equivalent: css pixels are 96 per inch. */
+export const SCAN_SCALE = 150 / 96;
 
-export async function openPage(): Promise<{ browser: Browser; page: Page }> {
+export async function openPage(
+  scale = 1,
+): Promise<{ browser: Browser; page: Page }> {
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: A4_PX });
+  const page = await browser.newPage({
+    viewport: A4_PX,
+    deviceScaleFactor: scale,
+  });
   return { browser, page };
 }
 
-export async function stampPdf(
-  bytes: Uint8Array,
-  title: string,
-): Promise<Uint8Array> {
-  const doc = await PDFDocument.load(bytes);
+export function stampDoc(doc: PDFDocument, title: string) {
   doc.setTitle(title);
   doc.setAuthor("");
   doc.setSubject("");
@@ -26,6 +27,11 @@ export async function stampPdf(
   doc.setCreator("Sample corpus generator");
   doc.setCreationDate(FIXED_DATE);
   doc.setModificationDate(FIXED_DATE);
+}
+
+async function stampPdf(bytes: Uint8Array, title: string): Promise<Uint8Array> {
+  const doc = await PDFDocument.load(bytes);
+  stampDoc(doc, title);
   return doc.save();
 }
 
@@ -43,7 +49,7 @@ export async function htmlToPdf(
   return stampPdf(pdf, title);
 }
 
-/** Full-page PNG at scan resolution, one entry per A4 page worth of content. */
+/** One PNG per A4 page worth of content, at the page's device scale. */
 export async function htmlToPages(page: Page, html: string): Promise<Buffer[]> {
   await page.setContent(html, { waitUntil: "load" });
   const height = await page.evaluate(
@@ -61,11 +67,8 @@ export async function htmlToPages(page: Page, html: string): Promise<Buffer[]> {
           height: A4_PX.height,
         },
         fullPage: true,
-        scale: "device",
       }),
     );
   }
   return out;
 }
-
-export { A4_PX, SCAN_SCALE };
