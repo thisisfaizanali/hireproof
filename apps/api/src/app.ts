@@ -1,15 +1,21 @@
+import cookieParser from "cookie-parser";
 import express, { type ErrorRequestHandler } from "express";
 import helmet from "helmet";
+import { auth } from "./auth";
 import { env } from "./env";
 import { health } from "./health";
 
 export const app = express();
 
 app.disable("x-powered-by");
+// The web app proxies /api, so the client address arrives in X-Forwarded-For.
+app.set("trust proxy", 1);
 app.use(helmet());
 app.use(express.json({ limit: "100kb" }));
+app.use(cookieParser());
 
 app.use(health);
+app.use(auth);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
