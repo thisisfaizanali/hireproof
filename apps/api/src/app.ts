@@ -2,6 +2,7 @@ import cookieParser from "cookie-parser";
 import express, { type ErrorRequestHandler } from "express";
 import helmet from "helmet";
 import { auth } from "./auth";
+import { clients } from "./clients";
 import { env } from "./env";
 import { health } from "./health";
 
@@ -28,6 +29,7 @@ app.use("/api", (req, res, next) => {
 
 app.use(health);
 app.use(auth);
+app.use(clients);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
