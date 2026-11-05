@@ -49,3 +49,43 @@ export const ClientSummary = z.object({
   industry: Industry,
 });
 export type ClientSummary = z.infer<typeof ClientSummary>;
+
+// Fictional accounts created by the API seed and offered as quick logins on the
+// demo deployment. `client` is the company name for hiring managers.
+export const DEMO_USERS: {
+  name: string;
+  email: string;
+  role: Role;
+  client: string | null;
+}[] = [
+  {
+    name: "Ananya Sharma",
+    email: "ananya.sharma@hireproof.test",
+    role: "RECRUITER",
+    client: null,
+  },
+  {
+    name: "Rohan Mehta",
+    email: "rohan.mehta@hireproof.test",
+    role: "RECRUITER",
+    client: null,
+  },
+  {
+    name: "Vikram Rao",
+    email: "vikram.rao@hireproof.test",
+    role: "DELIVERY_HEAD",
+    client: null,
+  },
+  {
+    name: "Priya Nair",
+    email: "priya.nair@kestrelinfotech.test",
+    role: "CLIENT_HM",
+    client: "Kestrel Infotech",
+  },
+  {
+    name: "Arjun Kulkarni",
+    email: "arjun.kulkarni@sahyadrifinserv.test",
+    role: "CLIENT_HM",
+    client: "Sahyadri Finserv",
+  },
+];
