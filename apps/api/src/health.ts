@@ -1,23 +1,13 @@
 import { Router } from "express";
-import { Client } from "pg";
 import type { HealthResponse } from "@hireproof/shared";
+import { prisma } from "./db";
 
 async function dbIsUp(): Promise<boolean> {
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    connectionTimeoutMillis: 2000,
-    query_timeout: 2000,
-  });
-  // A dropped connection emits an error event; without a listener it would crash the process.
-  client.on("error", () => {});
   try {
-    await client.connect();
-    await client.query("SELECT 1");
+    await prisma.$queryRaw`SELECT 1`;
     return true;
   } catch {
     return false;
-  } finally {
-    await client.end().catch(() => {});
   }
 }
 

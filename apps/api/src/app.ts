@@ -1,5 +1,6 @@
 import express, { type ErrorRequestHandler } from "express";
 import helmet from "helmet";
+import { env } from "./env";
 import { health } from "./health";
 
 export const app = express();
@@ -26,7 +27,7 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     status < 500 && err.message ? err.message : "Internal server error";
   res.status(status).json({
     error: message,
-    ...(process.env.NODE_ENV !== "production" && status >= 500
+    ...(env.NODE_ENV !== "production" && status >= 500
       ? { stack: String(err.stack) }
       : {}),
   });
