@@ -90,4 +90,4 @@ Run from the repository root.
 
 ## Tests
 
-`npm test` needs the compose database running and applied migrations (`npm run db:migrate`). The tests use the database in `DATABASE_URL` and truncate its tables, so run `npm run db:seed` again afterwards, or point `DATABASE_URL` at a separate database while testing.
+`npm test` needs the compose database running. It uses a separate database named like the one in `DATABASE_URL` with `_test` added (for example `hireproof_test`), creates it if it is missing and applies the migrations, so your development data is never touched. Set `TEST_DATABASE_URL` to use a different database.

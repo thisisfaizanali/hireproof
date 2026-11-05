@@ -9,6 +9,11 @@ const hash = (password: string) => bcrypt.hashSync(password, 4);
 const passwordHash = hash(PASSWORD);
 
 export async function resetDb() {
+  // Truncating is only safe on the dedicated test database.
+  const dbName = new URL(process.env.DATABASE_URL ?? "").pathname;
+  if (!dbName.endsWith("_test") && !process.env.TEST_DATABASE_URL) {
+    throw new Error(`Refusing to truncate ${dbName}: not a test database`);
+  }
   await prisma.$executeRaw`TRUNCATE "AuditEvent", "Session", "User", "Client" CASCADE`;
 }
 
