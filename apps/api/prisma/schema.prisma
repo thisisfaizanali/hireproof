@@ -30,18 +30,20 @@ model Client {
 }
 
 model User {
-  id                  String        @id @default(cuid())
-  email               String        @unique
+  id                  String          @id @default(cuid())
+  email               String          @unique
   name                String
   passwordHash        String
   role                Role
   clientId            String?
-  client              Client?       @relation(fields: [clientId], references: [id])
-  createdAt           DateTime      @default(now())
+  client              Client?         @relation(fields: [clientId], references: [id])
+  createdAt           DateTime        @default(now())
   sessions            Session[]
   auditEvents         AuditEvent[]
   requisitions        Requisition[]
   confirmedScorecards Scorecard[]
+  uploadBatches       UploadBatch[]
+  resolvedDuplicates  DuplicateLink[]
 }
 
 model Session {
@@ -100,20 +102,23 @@ enum AiOutcome {
 }
 
 model Requisition {
-  id         String            @id @default(cuid())
-  number     Int               @unique @default(autoincrement())
-  clientId   String
-  client     Client            @relation(fields: [clientId], references: [id])
-  ownerId    String
-  owner      User              @relation(fields: [ownerId], references: [id])
-  title      String
-  jdText     String
-  jdFileName String?
-  status     RequisitionStatus @default(DRAFT)
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
-  scorecard  Scorecard?
-  aiRuns     AiRun[]
+  id           String            @id @default(cuid())
+  number       Int               @unique @default(autoincrement())
+  clientId     String
+  client       Client            @relation(fields: [clientId], references: [id])
+  ownerId      String
+  owner        User              @relation(fields: [ownerId], references: [id])
+  title        String
+  jdText       String
+  jdFileName   String?
+  status       RequisitionStatus @default(DRAFT)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  scorecard    Scorecard?
+  aiRuns       AiRun[]
+  batches      UploadBatch[]
+  cvs          CvDocument[]
+  applications Application[]
 
   @@index([clientId])
   @@index([status])
@@ -176,4 +181,156 @@ model AiRun {
   createdAt     DateTime     @default(now())
 
   @@index([requisitionId])
+}
+
+enum TextSource {
+  TEXT_LAYER
+  OCR
+}
+
+enum CvStatus {
+  QUEUED
+  EXTRACTING
+  OCR
+  PARSING
+  PARSED
+  NEEDS_REVIEW
+  FAILED
+  DUPLICATE_FILE
+}
+
+enum ParseSource {
+  AI
+  RULES
+}
+
+enum ApplicationStage {
+  SOURCED
+  SCREENED
+  SUBMITTED
+  CLIENT_SHORTLISTED
+  INTERVIEW
+  OFFERED
+  JOINED
+  REJECTED
+  WITHDRAWN
+}
+
+enum DuplicateKind {
+  EXACT_FILE
+  CONTACT
+  FUZZY
+}
+
+enum DuplicateStatus {
+  AUTO_MERGED
+  PENDING
+  SAME_PERSON
+  DIFFERENT_PEOPLE
+}
+
+model Candidate {
+  id                   String          @id @default(cuid())
+  code                 String          @unique @default(dbgenerated("'CND-' || lpad(nextval('candidate_code_seq')::text, 5, '0')"))
+  name                 String
+  email                String?
+  phone                String?
+  location             String?
+  currentRole          String?
+  totalExperienceYears Decimal?        @db.Decimal(4, 1)
+  skills               String[]
+  noticeText           String?
+  noticeDays           Int?
+  ctcText              String?
+  currentCtcLpa        Decimal?        @db.Decimal(6, 2)
+  expectedCtcLpa       Decimal?        @db.Decimal(6, 2)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  cvs                  CvDocument[]
+  applications         Application[]
+  duplicateLinks       DuplicateLink[]
+
+  @@index([email])
+  @@index([phone])
+}
+
+model UploadBatch {
+  id            String       @id @default(cuid())
+  requisitionId String
+  requisition   Requisition  @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  uploadedById  String
+  uploadedBy    User         @relation(fields: [uploadedById], references: [id])
+  expectedCount Int
+  createdAt     DateTime     @default(now())
+  cvs           CvDocument[]
+
+  @@index([requisitionId, createdAt])
+}
+
+model CvDocument {
+  id             String          @id @default(cuid())
+  candidateId    String?
+  candidate      Candidate?      @relation(fields: [candidateId], references: [id])
+  batchId        String
+  batch          UploadBatch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  requisitionId  String
+  requisition    Requisition     @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  fileName       String
+  mimeType       String
+  sizeBytes      Int
+  sha256         String
+  // Files stay in Postgres for now: move to object storage at real volume.
+  // Deleting a candidate stays a single transaction while the bytes are here.
+  data           Bytes
+  text           String?
+  redactedText   String?
+  textSource     TextSource?
+  ocrConfidence  Float?
+  status         CvStatus        @default(QUEUED)
+  reviewReasons  String[]
+  failureReason  String?
+  parseSource    ParseSource?
+  // The parsed profile as read from this file, kept so the candidate profile can be rebuilt from the latest CV.
+  profile        Json?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  duplicateLinks DuplicateLink[]
+
+  @@index([sha256])
+  @@index([batchId])
+  @@index([candidateId])
+  @@index([requisitionId])
+}
+
+model Application {
+  id            String           @id @default(cuid())
+  candidateId   String
+  candidate     Candidate        @relation(fields: [candidateId], references: [id])
+  requisitionId String
+  requisition   Requisition      @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  stage         ApplicationStage @default(SOURCED)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([candidateId, requisitionId])
+  @@index([requisitionId, createdAt])
+}
+
+model DuplicateLink {
+  id           String          @id @default(cuid())
+  cvId         String
+  cv           CvDocument      @relation(fields: [cvId], references: [id], onDelete: Cascade)
+  candidateId  String
+  candidate    Candidate       @relation(fields: [candidateId], references: [id])
+  kind         DuplicateKind
+  similarity   Float?
+  status       DuplicateStatus
+  resolvedById String?
+  resolvedBy   User?           @relation(fields: [resolvedById], references: [id])
+  resolvedAt   DateTime?
+  createdAt    DateTime        @default(now())
+
+  @@index([status])
+  @@index([cvId])
+  @@index([candidateId])
 }
