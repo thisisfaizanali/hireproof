@@ -356,71 +356,72 @@ candidates.post(
       res.status(404).json({ error: "Duplicate not found" });
       return;
     }
-    if (link.status !== "PENDING") {
-      res.status(409).json({ error: "This duplicate was already resolved." });
-      return;
-    }
+    const { samePerson } = input.data;
     const resolution = {
       resolvedById: req.user!.id,
       resolvedAt: new Date(),
     };
 
-    if (!input.data.samePerson) {
-      await prisma.duplicateLink.update({
-        where: { id: link.id },
-        data: { status: "DIFFERENT_PEOPLE", ...resolution },
+    // Claiming the link first makes a double click safe: the second request
+    // waits on the row lock, then finds it no longer pending.
+    const claimed = await prisma.$transaction(async (tx) => {
+      const claim = await tx.duplicateLink.updateMany({
+        where: { id: link.id, status: "PENDING" },
+        data: {
+          status: samePerson ? "SAME_PERSON" : "DIFFERENT_PEOPLE",
+          ...resolution,
+        },
       });
-    } else {
+      if (claim.count === 0) return false;
       const sourceId = link.cv.candidateId;
       const targetId = link.candidateId;
-      await prisma.$transaction(async (tx) => {
-        if (sourceId && sourceId !== targetId) {
-          const target = await tx.candidate.findUniqueOrThrow({
-            where: { id: targetId },
-          });
-          // The CV that was under review is the newest, so its details lead.
-          await tx.candidate.update({
-            where: { id: targetId },
-            data: mergedFields(target, link.cv.profile as unknown as CvProfile),
-          });
-          await tx.cvDocument.updateMany({
-            where: { candidateId: sourceId },
-            data: { candidateId: targetId },
-          });
+      if (!samePerson || !sourceId || sourceId === targetId) return true;
 
-          const apps = await tx.application.findMany({
-            where: { candidateId: sourceId },
-          });
-          for (const app of apps) {
-            const existing = await tx.application.findUnique({
-              where: {
-                candidateId_requisitionId: {
-                  candidateId: targetId,
-                  requisitionId: app.requisitionId,
-                },
-              },
-            });
-            if (existing) {
-              await tx.application.delete({ where: { id: app.id } });
-            } else {
-              await tx.application.update({
-                where: { id: app.id },
-                data: { candidateId: targetId },
-              });
-            }
-          }
-          // Links that pointed at the candidate about to disappear.
-          await tx.duplicateLink.updateMany({
-            where: { candidateId: sourceId },
+      const target = await tx.candidate.findUniqueOrThrow({
+        where: { id: targetId },
+      });
+      // The CV that was under review is the newest, so its details lead.
+      await tx.candidate.update({
+        where: { id: targetId },
+        data: mergedFields(target, link.cv.profile as unknown as CvProfile),
+      });
+      await tx.cvDocument.updateMany({
+        where: { candidateId: sourceId },
+        data: { candidateId: targetId },
+      });
+
+      const apps = await tx.application.findMany({
+        where: { candidateId: sourceId },
+      });
+      for (const app of apps) {
+        const existing = await tx.application.findUnique({
+          where: {
+            candidateId_requisitionId: {
+              candidateId: targetId,
+              requisitionId: app.requisitionId,
+            },
+          },
+        });
+        if (existing) {
+          await tx.application.delete({ where: { id: app.id } });
+        } else {
+          await tx.application.update({
+            where: { id: app.id },
             data: { candidateId: targetId },
           });
-          await tx.candidate.delete({ where: { id: sourceId } });
         }
-        await tx.duplicateLink.update({
-          where: { id: link.id },
-          data: { status: "SAME_PERSON", ...resolution },
-        });
+      }
+      // Links that pointed at the candidate about to disappear.
+      await tx.duplicateLink.updateMany({
+        where: { candidateId: sourceId },
+        data: { candidateId: targetId },
       });
+      await tx.candidate.delete({ where: { id: sourceId } });
+      return true;
+    });
+    if (!claimed) {
+      res.status(409).json({ error: "This duplicate was already resolved." });
+      return;
     }
 
     await audit({

@@ -588,6 +588,24 @@ describe("resolving a duplicate", () => {
     expect(await prisma.candidate.count()).toBe(2);
   });
 
+  it("answers a double click with one success and one conflict", async () => {
+    const { link } = await pair();
+    const results = await Promise.all(
+      [true, true].map((samePerson) =>
+        postJson(recruiter.cookie, `/api/duplicates/${link.id}/resolve`, {
+          samePerson,
+        }),
+      ),
+    );
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+    expect(await prisma.candidate.count()).toBe(1);
+    expect(
+      await prisma.auditEvent.count({
+        where: { action: "DUPLICATE_RESOLVED" },
+      }),
+    ).toBe(1);
+  });
+
   it("rejects a body that is not a yes or no", async () => {
     const { link } = await pair();
     const res = await postJson(
