@@ -112,7 +112,9 @@ function fieldErrors(res: ExpressResponse, error: z.ZodError) {
 const notFound = (res: ExpressResponse) =>
   res.status(404).json({ error: "Requisition not found" });
 
-function scorecardData(e: Extraction) {
+export type SeedExtraction = Pick<Extraction, "scorecard" | "source" | "model">;
+
+export function scorecardData(e: SeedExtraction) {
   const s = e.scorecard;
   return {
     experienceMinYears: s.experience.minYears,
@@ -135,7 +137,7 @@ function scorecardData(e: Extraction) {
   };
 }
 
-const criteriaRows = (e: Extraction) =>
+export const criteriaRows = (e: SeedExtraction) =>
   e.scorecard.criteria.map((c, position) => ({
     kind: c.kind,
     label: c.label,
