@@ -131,7 +131,7 @@ const newCandidateData = (p: CvProfile) => ({
   expectedCtcLpa: p.expectedCtcLpa,
 });
 
-async function persist(
+export async function persistParsed(
   cv: { id: string; sha256: string; requisitionId: string },
   parsed: ParsedCv,
 ) {
@@ -282,7 +282,7 @@ export async function processCv(cvId: string, deps: JobDeps = defaultDeps) {
       today: deps.today(),
       onStage: (stage) => setStatus(cv.id, stage).then(() => undefined),
     });
-    await persist(cv, parsed);
+    await persistParsed(cv, parsed);
   } catch (err) {
     if (err instanceof CvExtractError) {
       await fail(cv.id, err.message);

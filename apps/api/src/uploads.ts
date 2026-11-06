@@ -79,7 +79,10 @@ const MIME = {
 } as const;
 
 // The bytes decide the type, and the extension has to agree with them.
-function detectType(buffer: Buffer, fileName: string): "pdf" | "docx" | null {
+export function detectType(
+  buffer: Buffer,
+  fileName: string,
+): "pdf" | "docx" | null {
   const ext = extname(fileName).toLowerCase();
   if (buffer.subarray(0, 5).toString("latin1") === "%PDF-" && ext === ".pdf") {
     return "pdf";

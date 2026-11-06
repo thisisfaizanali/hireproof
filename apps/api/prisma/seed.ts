@@ -1,13 +1,18 @@
 import bcrypt from "bcryptjs";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { DEMO_USERS, canonicalSkill } from "@hireproof/shared";
 import { rulesScorecard } from "../src/ai/rules";
+import { aiProfile } from "../src/cv/aiProfile";
+import { persistParsed } from "../src/cv/job";
+import { parseCv, type ParsedCv } from "../src/cv/parse";
 import {
   criteriaRows,
   scorecardData,
   type SeedExtraction,
 } from "../src/requisitions";
+import { ASOF, cvTruth, readSample } from "../scripts/cvCorpus";
 import { readJd, truth } from "../scripts/jds";
 import { prisma } from "../src/db";
 import type { Industry } from "../src/generated/prisma/client";
@@ -111,6 +116,107 @@ async function seedRequisitions() {
   }
 }
 
+// The brief names three candidates; their codes are fixed so the demo matches it.
+const BRIEF_CODES = new Set(["CND-91022", "CND-91047", "CND-91088"]);
+
+// Per requisition, the sample CVs meant for it. The three CVs that fit no role
+// ride along in the first Kestrel pool, like a mixed pile of real applications.
+// The seed may read the evaluation labels; the app never does.
+const poolFor = (key: string) =>
+  cvTruth.filter(
+    (c) =>
+      c.intendedRequisition === key ||
+      (key === "kestrel-senior-java" && c.intendedRequisition === null),
+  );
+
+type Fixture = {
+  model: string | null;
+  parses: Record<string, ParsedCv>;
+};
+
+async function seedCandidates() {
+  const fixturePath = resolve(__dirname, "fixtures/cv-parses.json");
+  const fixture: Fixture | null = existsSync(fixturePath)
+    ? JSON.parse(readFileSync(fixturePath, "utf8"))
+    : null;
+  if (!fixture) {
+    console.log(
+      "No captured CV parses found; parsing text CVs with rules only (scans are skipped).",
+    );
+  }
+
+  for (const jd of truth) {
+    const file = jd.file.split("/").pop()!;
+    const requisition = await prisma.requisition.findFirst({
+      where: { jdFileName: file },
+    });
+    if (!requisition) continue;
+    if (
+      await prisma.uploadBatch.findFirst({
+        where: { requisitionId: requisition.id },
+      })
+    ) {
+      continue;
+    }
+    const pool = poolFor(jd.key);
+    if (pool.length === 0) continue;
+
+    const batch = await prisma.uploadBatch.create({
+      data: {
+        requisitionId: requisition.id,
+        uploadedById: requisition.ownerId,
+        expectedCount: pool.length,
+      },
+    });
+    for (const cv of pool) {
+      const bytes = readSample(cv.file);
+      const name = cv.file.split("/").pop()!;
+      let parsed = fixture?.parses[cv.file];
+      if (!parsed) {
+        try {
+          parsed = await parseCv(bytes, name, {
+            ai: (text) => aiProfile(text, { model: null }),
+            today: ASOF,
+            ocr: async () => {
+              throw new Error("OCR is not used when seeding");
+            },
+          });
+        } catch {
+          console.log(`Skipped ${cv.file}: needs the captured parse.`);
+          continue;
+        }
+      }
+      const row = await prisma.cvDocument.create({
+        data: {
+          batchId: batch.id,
+          requisitionId: requisition.id,
+          fileName: name,
+          mimeType: name.endsWith(".pdf")
+            ? "application/pdf"
+            : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          sizeBytes: bytes.length,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+          data: new Uint8Array(bytes),
+        },
+      });
+      await persistParsed(row, parsed);
+    }
+  }
+
+  for (const cv of cvTruth) {
+    if (!BRIEF_CODES.has(cv.candidateId)) continue;
+    const row = await prisma.cvDocument.findFirst({
+      where: { fileName: cv.file.split("/").pop()! },
+    });
+    if (row?.candidateId) {
+      await prisma.candidate.update({
+        where: { id: row.candidateId },
+        data: { code: cv.candidateId },
+      });
+    }
+  }
+}
+
 async function main() {
   const password = process.env.SEED_DEMO_PASSWORD;
   if (!password || password.length < 8) {
@@ -139,6 +245,7 @@ async function main() {
   }
 
   await seedRequisitions();
+  await seedCandidates();
 
   console.table(
     DEMO_USERS.map(({ email, role, client }) => ({
