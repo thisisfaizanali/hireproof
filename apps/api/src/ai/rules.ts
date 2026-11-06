@@ -85,6 +85,14 @@ const CITY = new RegExp(
   String.raw`\b(new delhi|noida|gurugram|gurgaon|delhi|ncr|pune|bengaluru|bangalore|hyderabad|mumbai|chennai|kolkata)\b`,
   "gi",
 );
+const NCR_CITIES = [
+  "delhi",
+  "new delhi",
+  "gurugram",
+  "noida",
+  "ghaziabad",
+  "faridabad",
+];
 const cityName = (raw: string) => {
   const key = raw.toLowerCase();
   if (CITY_ALIASES[key]) return CITY_ALIASES[key];
@@ -106,6 +114,8 @@ function locations(text: string): Extracted["locations"] {
   for (const place of [...listed, ...mentions.map((m) => cityName(m[0]))]) {
     unique.set(place.toLowerCase(), place);
   }
+  // A region found next to its own cities is redundant.
+  if (NCR_CITIES.some((c) => unique.has(c))) unique.delete("ncr");
   if (unique.size === 0) return { values: [], ...cited(false, null) };
   const quote =
     listed.length > 0

@@ -39,6 +39,13 @@ describe("rules fallback gaps", () => {
     expect(rulesScorecard("Work from home").locations.values).toEqual([]);
   });
 
+  it("keeps named cities and drops their region", () => {
+    const both = rulesScorecard("Location: NCR, Gurgaon, Noida");
+    expect(both.locations.values).toEqual(["Gurugram", "Noida"]);
+    const alone = rulesScorecard("We hire across NCR.");
+    expect(alone.locations.values).toEqual(["NCR"]);
+  });
+
   it("notes what a JD does not say", async () => {
     const jd = manifest.jds.find((j) => j.key === "marigold-store-ops")!;
     const { text } = await extractText(sample(jd.file), "x.txt");
