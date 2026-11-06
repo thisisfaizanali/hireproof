@@ -108,6 +108,7 @@ applications.get(
       },
       cvId: cv?.id ?? null,
       cvViewed: cv ? await hasViewed(req.user!.id, cv.id) : false,
+      scorecardConfirmed: app.requisition.scorecard?.status === "CONFIRMED",
     };
     const body: ScoreResponse = {
       application,

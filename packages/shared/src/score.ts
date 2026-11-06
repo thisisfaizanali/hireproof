@@ -132,6 +132,7 @@ export interface ApplicationInfo {
   // The CV the score was read from, and whether this user has opened it.
   cvId: string | null;
   cvViewed: boolean;
+  scorecardConfirmed: boolean;
 }
 
 export interface ScoreResponse {

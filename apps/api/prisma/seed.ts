@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { DEMO_USERS, canonicalSkill } from "@hireproof/shared";
+import { DEMO_USERS, type AiOutcome } from "@hireproof/shared";
 import { rulesScorecard } from "../src/ai/rules";
 import { aiProfile } from "../src/cv/aiProfile";
 import { persistParsed } from "../src/cv/job";
@@ -13,6 +13,14 @@ import {
   type SeedExtraction,
 } from "../src/requisitions";
 import { ASOF, cvTruth, readSample } from "../scripts/cvCorpus";
+import {
+  fixtureVerdicts,
+  poolFor,
+  readScoreFixture,
+  reviewedScorecard,
+} from "../scripts/scoreCorpus";
+import { audit } from "../src/audit";
+import { processScore, scorableCv } from "../src/score/job";
 import { readJd, truth } from "../scripts/jds";
 import { prisma } from "../src/db";
 import type { Industry } from "../src/generated/prisma/client";
@@ -73,22 +81,7 @@ async function seedRequisitions() {
     const owner = recruiters[plan.owner % recruiters.length];
 
     if (plan.confirmed) {
-      // A confirmed scorecard has been through review: flags cleared, and at
-      // least one must-have, taken from the ground truth when the rules ran.
-      const wanted = new Set(
-        jd.mustHaveSkills.map((s) => canonicalSkill(s) ?? s),
-      );
-      extraction.scorecard = {
-        ...extraction.scorecard,
-        criteria: extraction.scorecard.criteria.map((c) => ({
-          ...c,
-          kind:
-            wanted.has(c.label) || c.kind === "MUST_HAVE"
-              ? "MUST_HAVE"
-              : c.kind,
-          needsReview: false,
-        })),
-      };
+      extraction.scorecard = reviewedScorecard(extraction.scorecard, jd);
     }
 
     await prisma.requisition.create({
@@ -118,16 +111,6 @@ async function seedRequisitions() {
 
 // The brief names three candidates; their codes are fixed so the demo matches it.
 const BRIEF_CODES = new Set(["CND-91022", "CND-91047", "CND-91088"]);
-
-// Per requisition, the sample CVs meant for it. The three CVs that fit no role
-// ride along in the first Kestrel pool, like a mixed pile of real applications.
-// The seed may read the evaluation labels; the app never does.
-const poolFor = (key: string) =>
-  cvTruth.filter(
-    (c) =>
-      c.intendedRequisition === key ||
-      (key === "kestrel-senior-java" && c.intendedRequisition === null),
-  );
 
 type Fixture = {
   model: string | null;
@@ -217,6 +200,144 @@ async function seedCandidates() {
   }
 }
 
+// Scores come from the captured model answers, run through the same evidence
+// check and formula as a live score. Without them, rules score the candidates.
+async function seedScores() {
+  const fixture = readScoreFixture();
+  if (!fixture) {
+    console.log(
+      "No captured scores found; scoring seeded candidates with rules.",
+    );
+  }
+  for (const jd of truth) {
+    const file = jd.file.split("/").pop()!;
+    const requisition = await prisma.requisition.findFirst({
+      where: { jdFileName: file },
+      include: { scorecard: true, applications: true },
+    });
+    if (requisition?.scorecard?.status !== "CONFIRMED") continue;
+    for (const app of requisition.applications) {
+      const cv = await scorableCv(app.candidateId);
+      if (!cv) continue;
+      const row = await prisma.cvDocument.findUniqueOrThrow({
+        where: { id: cv.id },
+        select: { fileName: true },
+      });
+      const captured = fixture?.scores[jd.key]?.[`cvs/${row.fileName}`];
+      await processScore(app.id, {
+        ai: async (criteria) =>
+          captured
+            ? {
+                verdicts: fixtureVerdicts(captured, criteria),
+                run: {
+                  model: captured.model,
+                  outcome: captured.outcome as AiOutcome,
+                  latencyMs: captured.latencyMs,
+                  inputTokens: captured.inputTokens,
+                  outputTokens: captured.outputTokens,
+                  errorMessage: null,
+                },
+              }
+            : {
+                verdicts: null,
+                run: {
+                  model: "rules",
+                  outcome: "NOT_CONFIGURED",
+                  latencyMs: 0,
+                  inputTokens: null,
+                  outputTokens: null,
+                  errorMessage: null,
+                },
+              },
+      });
+    }
+  }
+}
+
+// A believable desk: Ananya has opened and screened the three best Kestrel
+// candidates and turned down the two weakest.
+async function seedDecisions() {
+  const file = "Kestrel_Senior_Java_Developer_JD.docx";
+  const requisition = await prisma.requisition.findFirst({
+    where: { jdFileName: file },
+    include: { scorecard: true, applications: { include: { scores: true } } },
+  });
+  const ananya = await prisma.user.findUnique({
+    where: { email: "ananya.sharma@hireproof.test" },
+  });
+  if (!requisition?.scorecard || !ananya) return;
+  if (requisition.applications.some((a) => a.stage !== "SOURCED")) return;
+
+  const order = { STRONG: 0, POSSIBLE: 1, WEAK: 2 } as const;
+  const scored = requisition.applications
+    .flatMap((app) => {
+      const score = app.scores.find(
+        (s) => s.scorecardVersion === requisition.scorecard!.version,
+      );
+      return score ? [{ app, score }] : [];
+    })
+    .sort(
+      (a, b) =>
+        order[a.score.band] - order[b.score.band] ||
+        b.score.total - a.score.total,
+    );
+  const band = ({ score }: (typeof scored)[number]) => ({
+    band: score.band,
+    total: score.total,
+    scoreSource: score.source,
+    scorecardVersion: score.scorecardVersion,
+    stale: false,
+  });
+  const base = { actorId: ananya.id, entityType: "Application" };
+
+  for (const item of scored.slice(0, 3)) {
+    const cv = await scorableCv(item.app.candidateId);
+    if (!cv) continue;
+    await audit({
+      actorId: ananya.id,
+      action: "CV_VIEWED",
+      entityType: "CvDocument",
+      entityId: cv.id,
+      meta: {
+        candidateId: item.app.candidateId,
+        requisitionId: requisition.id,
+      },
+    });
+    await prisma.application.update({
+      where: { id: item.app.id },
+      data: {
+        stage: "SCREENED",
+        decidedById: ananya.id,
+        decidedAt: new Date(),
+      },
+    });
+    await audit({
+      ...base,
+      action: "APPLICATION_SCREENED",
+      entityId: item.app.id,
+      meta: { ...band(item), cvId: cv.id },
+    });
+  }
+  const reasons = ["SKILLS_GAP", "EXPERIENCE"] as const;
+  for (const [i, item] of scored.slice(-2).entries()) {
+    await prisma.application.update({
+      where: { id: item.app.id },
+      data: {
+        stage: "REJECTED",
+        rejectReason: reasons[i],
+        decidedById: ananya.id,
+        decidedAt: new Date(),
+      },
+    });
+    await audit({
+      ...base,
+      action: "APPLICATION_REJECTED",
+      entityId: item.app.id,
+      meta: { ...band(item), reason: reasons[i], fromStage: "SOURCED" },
+    });
+  }
+}
+
 async function main() {
   const password = process.env.SEED_DEMO_PASSWORD;
   if (!password || password.length < 8) {
@@ -246,6 +367,8 @@ async function main() {
 
   await seedRequisitions();
   await seedCandidates();
+  await seedScores();
+  await seedDecisions();
 
   console.table(
     DEMO_USERS.map(({ email, role, client }) => ({
