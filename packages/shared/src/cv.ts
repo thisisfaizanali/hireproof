@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ScoreState, ScoreSummary } from "./score";
 
 export const CV_LIMITS = {
   fileBytes: 10 * 1024 * 1024,
@@ -84,6 +85,7 @@ export interface UploadBatchView {
 }
 
 export interface CandidateRow {
+  applicationId: string;
   id: string;
   code: string;
   name: string;
@@ -99,6 +101,11 @@ export interface CandidateRow {
   scanned: boolean;
   needsReview: boolean;
   possibleDuplicate: boolean;
+  // Null until the requisition has a confirmed scorecard.
+  rank: number | null;
+  score: ScoreSummary | null;
+  scoreState: ScoreState | null;
+  cvId: string | null;
 }
 
 export interface CandidateList {
@@ -106,6 +113,9 @@ export interface CandidateList {
   total: number;
   page: number;
   pageSize: number;
+  ranked: boolean;
+  scorecardVersion: number | null;
+  progress: { scored: number; total: number } | null;
 }
 
 export interface CandidateCv {
@@ -154,6 +164,8 @@ export interface CandidateDetail {
     id: string;
     stage: string;
     requisition: { id: string; number: number; title: string };
+    score: ScoreSummary | null;
+    cvId: string | null;
   }[];
   duplicates: CandidateDuplicate[];
 }

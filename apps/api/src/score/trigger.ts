@@ -1,4 +1,5 @@
 import { prisma } from "../db";
+import type { Prisma } from "../generated/prisma/client";
 
 export interface ScoreJob {
   applicationId: string;
@@ -24,20 +25,19 @@ export async function queueScoring(applicationIds: string[], force = false) {
 
 export const SCORABLE = ["PARSED", "NEEDS_REVIEW"] as const;
 
-// Applications whose candidate has a CV with text to score.
+// Candidates who have a CV with text to score.
+export const hasScorableCv = {
+  cvs: {
+    some: { redactedText: { not: null }, status: { in: [...SCORABLE] } },
+  },
+} satisfies Prisma.CandidateWhereInput;
+
 export async function scorableApplicationIds(where: {
   requisitionId?: string;
   candidateId?: string;
 }) {
   const rows = await prisma.application.findMany({
-    where: {
-      ...where,
-      candidate: {
-        cvs: {
-          some: { redactedText: { not: null }, status: { in: [...SCORABLE] } },
-        },
-      },
-    },
+    where: { ...where, candidate: hasScorableCv },
     select: { id: true },
   });
   return rows.map((r) => r.id);

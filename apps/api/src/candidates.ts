@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
 import {
+  BAND_FILTERS,
   ResolveDuplicateInput,
+  STAGE_FILTERS,
   canonicalSkill,
   type CandidateDetail,
   type CandidateList,
@@ -15,7 +17,8 @@ import { mergedFields } from "./cv/job";
 import type { CvProfile } from "./cv/merge";
 import { prisma } from "./db";
 import type { Prisma } from "./generated/prisma/client";
-import { queueCandidate } from "./score/trigger";
+import { SCORABLE, hasScorableCv, queueCandidate } from "./score/trigger";
+import { pendingState, toSummary } from "./score/view";
 
 export const candidates = Router();
 
@@ -30,8 +33,13 @@ const ListQuery = z.object({
   status: z
     .enum(["PARSED", "NEEDS_REVIEW", "SCANNED", "POSSIBLE_DUPLICATE"])
     .optional(),
+  band: z.enum(BAND_FILTERS).optional(),
+  stage: z.enum(STAGE_FILTERS).optional(),
   page: z.coerce.number().int().min(1).max(10_000).default(1),
 });
+
+const BAND_ORDER = { STRONG: 0, POSSIBLE: 1, WEAK: 2 } as const;
+const IN_FLIGHT = ["QUEUED", "EXTRACTING", "OCR", "PARSING"];
 
 // Flagged on both sides of a pending link: the candidate the CV matched, and
 // the candidate created for the CV under review.
@@ -51,8 +59,21 @@ candidates.get(
       res.status(400).json({ error: "Check the search and filter values" });
       return;
     }
-    const { search, status, page } = query.data;
+    const { search, status, band, stage, page } = query.data;
     const requisitionId = String(req.params.id);
+
+    const requisition = await prisma.requisition.findUnique({
+      where: { id: requisitionId },
+      select: { scorecard: { select: { status: true, version: true } } },
+    });
+    if (!requisition) {
+      res.status(404).json({ error: "Requisition not found" });
+      return;
+    }
+    const version =
+      requisition.scorecard?.status === "CONFIRMED"
+        ? requisition.scorecard.version
+        : null;
 
     const candidateWhere: Prisma.CandidateWhereInput = {
       AND: [
@@ -85,45 +106,123 @@ candidates.get(
     const where: Prisma.ApplicationWhereInput = {
       requisitionId,
       candidate: candidateWhere,
+      ...(stage && { stage }),
+      ...(version !== null &&
+        band === "UNSCORED" && {
+          scores: { none: { scorecardVersion: version } },
+        }),
+      ...(version !== null &&
+        band &&
+        band !== "UNSCORED" && {
+          scores: { some: { scorecardVersion: version, band } },
+        }),
     };
 
-    const [total, rows] = await Promise.all([
+    const include = {
+      candidate: {
+        include: {
+          cvs: {
+            orderBy: { createdAt: "desc" },
+            select: {
+              id: true,
+              status: true,
+              textSource: true,
+              createdAt: true,
+            },
+          },
+          duplicateLinks: {
+            where: { status: "PENDING" },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      },
+      scores: {
+        select: {
+          scorecardVersion: true,
+          total: true,
+          band: true,
+          mustHavesMet: true,
+          mustHavesTotal: true,
+          flags: true,
+          source: true,
+        },
+      },
+    } satisfies Prisma.ApplicationInclude;
+
+    // A ranking has to see every row to order it; an unranked list can let
+    // the database page it.
+    const [total, found, progress] = await Promise.all([
       prisma.application.count({ where }),
       prisma.application.findMany({
         where,
+        include,
         orderBy: { createdAt: "desc" },
-        skip: (page - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
-        include: {
-          candidate: {
-            include: {
-              cvs: {
-                orderBy: { createdAt: "desc" },
-                select: { status: true, textSource: true },
-              },
-              duplicateLinks: {
-                where: { status: "PENDING" },
-                select: { id: true },
-                take: 1,
-              },
-            },
-          },
-        },
+        ...(version === null && {
+          skip: (page - 1) * PAGE_SIZE,
+          take: PAGE_SIZE,
+        }),
       }),
+      version === null
+        ? null
+        : Promise.all([
+            prisma.candidateScore.count({
+              where: {
+                scorecardVersion: version,
+                application: { requisitionId },
+              },
+            }),
+            prisma.application.count({
+              where: { requisitionId, candidate: hasScorableCv },
+            }),
+          ]),
     ]);
+
+    type Row = (typeof found)[number];
+    const scorableCvOf = (row: Row) =>
+      row.candidate.cvs.find((cv) =>
+        (SCORABLE as readonly string[]).includes(cv.status),
+      );
+    const currentScore = (row: Row) =>
+      version === null
+        ? undefined
+        : row.scores.find((s) => s.scorecardVersion === version);
+
+    let rows = found;
+    if (version !== null) {
+      rows = [...found].sort((a, b) => {
+        const x = currentScore(a);
+        const y = currentScore(b);
+        if (!x || !y) return x ? -1 : y ? 1 : 0;
+        return (
+          BAND_ORDER[x.band] - BAND_ORDER[y.band] ||
+          y.total - x.total ||
+          y.mustHavesMet - x.mustHavesMet ||
+          (scorableCvOf(b)?.createdAt.getTime() ?? 0) -
+            (scorableCvOf(a)?.createdAt.getTime() ?? 0)
+        );
+      });
+    }
+    const first = version === null ? 0 : (page - 1) * PAGE_SIZE;
+    const pageRows =
+      version === null ? rows : rows.slice(first, first + PAGE_SIZE);
 
     // A candidate flagged as a possible duplicate may be the new side of a link
     // (their CV is the one under review) rather than the matched side.
-    const ids = rows.map((r) => r.candidateId);
+    const ids = pageRows.map((r) => r.candidateId);
     const asNewSide = await prisma.duplicateLink.findMany({
       where: { status: "PENDING", cv: { candidateId: { in: ids } } },
       select: { cv: { select: { candidateId: true } } },
     });
     const flagged = new Set(asNewSide.map((l) => l.cv.candidateId));
 
-    const items: CandidateRow[] = rows.map(({ candidate: c, stage }) => {
+    const items: CandidateRow[] = pageRows.map((row, i) => {
+      const { candidate: c, stage } = row;
       const latest = c.cvs[0];
+      const score = currentScore(row);
+      const scorable = scorableCvOf(row);
       return {
+        applicationId: row.id,
         id: c.id,
         code: c.code,
         name: c.name,
@@ -139,9 +238,31 @@ candidates.get(
         scanned: latest?.textSource === "OCR",
         needsReview: latest?.status === "NEEDS_REVIEW",
         possibleDuplicate: c.duplicateLinks.length > 0 || flagged.has(c.id),
+        rank: score ? first + i + 1 : null,
+        score: score ? toSummary(score) : null,
+        scoreState:
+          version === null
+            ? null
+            : score
+              ? "SCORED"
+              : pendingState({
+                  hasOlderScore: row.scores.length > 0,
+                  scoringStartedAt: row.scoringStartedAt,
+                  hasScorableCv: scorable !== undefined,
+                  cvInFlight: c.cvs.some((cv) => IN_FLIGHT.includes(cv.status)),
+                }),
+        cvId: scorable?.id ?? latest?.id ?? null,
       };
     });
-    const list: CandidateList = { items, total, page, pageSize: PAGE_SIZE };
+    const list: CandidateList = {
+      items,
+      total,
+      page,
+      pageSize: PAGE_SIZE,
+      ranked: version !== null,
+      scorecardVersion: version,
+      progress: progress && { scored: progress[0], total: progress[1] },
+    };
     res.json(list);
   },
 );
@@ -175,7 +296,15 @@ candidates.get("/api/candidates/:id", ...readers, async (req, res) => {
       applications: {
         orderBy: { createdAt: "desc" },
         include: {
-          requisition: { select: { id: true, number: true, title: true } },
+          requisition: {
+            select: {
+              id: true,
+              number: true,
+              title: true,
+              scorecard: { select: { status: true, version: true } },
+            },
+          },
+          scores: true,
         },
       },
       duplicateLinks: {
@@ -225,6 +354,13 @@ candidates.get("/api/candidates/:id", ...readers, async (req, res) => {
       : [],
   );
 
+  // Scored applications link to the CV the score was read from.
+  const currentCvId =
+    row.cvs.find((cv) => (SCORABLE as readonly string[]).includes(cv.status))
+      ?.id ??
+    row.cvs[0]?.id ??
+    null;
+
   const detail: CandidateDetail = {
     id: row.id,
     code: row.code,
@@ -254,11 +390,24 @@ candidates.get("/api/candidates/:id", ...readers, async (req, res) => {
       createdAt: cv.createdAt.toISOString(),
       requisition: cv.requisition,
     })),
-    applications: row.applications.map((a) => ({
-      id: a.id,
-      stage: a.stage,
-      requisition: a.requisition,
-    })),
+    applications: row.applications.map((a) => {
+      const card = a.requisition.scorecard;
+      const score =
+        card?.status === "CONFIRMED"
+          ? a.scores.find((s) => s.scorecardVersion === card.version)
+          : undefined;
+      return {
+        id: a.id,
+        stage: a.stage,
+        requisition: {
+          id: a.requisition.id,
+          number: a.requisition.number,
+          title: a.requisition.title,
+        },
+        score: score ? toSummary(score) : null,
+        cvId: currentCvId,
+      };
+    }),
     duplicates: [...own, ...incoming].sort((a, b) =>
       b.createdAt.localeCompare(a.createdAt),
     ),

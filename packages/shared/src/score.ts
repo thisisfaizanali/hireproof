@@ -120,3 +120,32 @@ export const SCORE_STATE_LABEL: Record<
 
 export const BAND_FILTERS = ["STRONG", "POSSIBLE", "WEAK", "UNSCORED"] as const;
 export const STAGE_FILTERS = ["SOURCED", "SCREENED", "REJECTED"] as const;
+
+export interface ApplicationInfo {
+  id: string;
+  stage: string;
+  rejectReason: RejectReason | null;
+  rejectNote: string | null;
+  decidedAt: string | null;
+  requisition: { id: string; number: number; title: string };
+  candidate: { id: string; code: string; name: string };
+  // The CV the score was read from, and whether this user has opened it.
+  cvId: string | null;
+  cvViewed: boolean;
+}
+
+export interface ScoreResponse {
+  application: ApplicationInfo;
+  state: ScoreState;
+  score: ScoreDetail | null;
+}
+
+export interface CvText {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  text: string;
+  textSource: "TEXT_LAYER" | "OCR" | null;
+  ocrConfidence: number | null;
+  reviewReasons: string[];
+}

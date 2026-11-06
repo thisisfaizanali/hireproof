@@ -27,6 +27,19 @@ export const scorableCv = (candidateId: string) =>
     select: { id: true, redactedText: true },
   });
 
+// The CV a candidate is read and screened on: the scored one, or failing that
+// the newest file.
+export async function currentCv(candidateId: string) {
+  return (
+    (await scorableCv(candidateId)) ??
+    prisma.cvDocument.findFirst({
+      where: { candidateId },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, redactedText: true },
+    })
+  );
+}
+
 const num = (d: Prisma.Decimal | null) => (d === null ? null : Number(d));
 
 export async function processScore(
