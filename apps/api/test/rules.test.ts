@@ -14,8 +14,8 @@ describe.each(manifest.jds)("rules fallback: $key", (jd) => {
     expect(card.experience.maxYears).toBe(jd.experienceMaxYears);
     expect(card.notice.maxDays).toBe(jd.noticeMaxDays);
     expect(card.ctc.maxLpa).toBe(jd.ctcBudgetLpa?.max ?? null);
-    if (jd.key === "kestrel-senior-java" || jd.key === "sahyadri-kyc-analyst") {
-      expect(card.locations.values).toEqual(jd.locations);
+    for (const place of jd.locations) {
+      expect(card.locations.values).toContain(place);
     }
 
     const labels = card.criteria.map((c) => c.label);
@@ -30,6 +30,15 @@ describe.each(manifest.jds)("rules fallback: $key", (jd) => {
 });
 
 describe("rules fallback gaps", () => {
+  it("finds bare city names and canonicalises spellings", () => {
+    const { locations } = rulesScorecard(
+      "Openings in Gurgaon and Bangalore, also new delhi.",
+    );
+    expect(locations.values).toEqual(["Gurugram", "Bengaluru", "New Delhi"]);
+    expect(locations.needsReview).toBe(true);
+    expect(rulesScorecard("Work from home").locations.values).toEqual([]);
+  });
+
   it("notes what a JD does not say", async () => {
     const jd = manifest.jds.find((j) => j.key === "marigold-store-ops")!;
     const { text } = await extractText(sample(jd.file), "x.txt");

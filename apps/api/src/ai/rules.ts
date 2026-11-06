@@ -77,17 +77,41 @@ function ctc(text: string): Extracted["ctc"] {
   return { maxLpa: Number(match[2] ?? match[1]), ...cited(true, match[0]) };
 }
 
+const CITY_ALIASES: Record<string, string> = {
+  gurgaon: "Gurugram",
+  bangalore: "Bengaluru",
+};
+const CITY = new RegExp(
+  String.raw`\b(new delhi|noida|gurugram|gurgaon|delhi|ncr|pune|bengaluru|bangalore|hyderabad|mumbai|chennai|kolkata)\b`,
+  "gi",
+);
+const cityName = (raw: string) => {
+  const key = raw.toLowerCase();
+  if (CITY_ALIASES[key]) return CITY_ALIASES[key];
+  return key === "ncr" ? "NCR" : key.replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
 function locations(text: string): Extracted["locations"] {
   const line = LOCATION_LINE.exec(text);
-  if (!line) return { values: [], ...cited(false, null) };
-  const values = line[1]
-    .replace(/\([^)]*\)/g, "")
-    .split(/,|\/|\bor\b|\band\b/i)
-    .map((place) => place.trim().replace(/[.;]$/, ""))
-    .filter(Boolean);
-  return values.length
-    ? { values, ...cited(true, line[0].trim()) }
-    : { values: [], ...cited(false, null) };
+  const listed = line
+    ? line[1]
+        .replace(/\([^)]*\)/g, "")
+        .split(/,|\/|\bor\b|\band\b/i)
+        .map((place) => place.trim().replace(/[.;]$/, ""))
+        .filter(Boolean)
+        .map((place) => CITY_ALIASES[place.toLowerCase()] ?? place)
+    : [];
+  const mentions = [...text.matchAll(CITY)];
+  const unique = new Map<string, string>();
+  for (const place of [...listed, ...mentions.map((m) => cityName(m[0]))]) {
+    unique.set(place.toLowerCase(), place);
+  }
+  if (unique.size === 0) return { values: [], ...cited(false, null) };
+  const quote =
+    listed.length > 0
+      ? line![0].trim()
+      : sentenceAround(text, mentions[0].index);
+  return { values: [...unique.values()], ...cited(true, quote) };
 }
 
 // Pattern matching cannot tell must-have from nice-to-have, so every skill found
