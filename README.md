@@ -2,7 +2,7 @@
 
 Hireproof is a resume screening tool for staffing firms. Recruiters create a job requisition, the AI extracts a scorecard from the job description, and recruiters bulk-upload CVs. Each CV is scored against the scorecard with evidence quoted from the CV. Recruiters then submit candidates to a client portal, and a pipeline tracks each requisition.
 
-This repository holds the foundation (sign-in, role-based shells, API, shared schemas, local database) and requisitions with scorecard extraction from job descriptions.
+This repository holds the foundation (sign-in, role-based shells, API, shared schemas, local database), requisitions with scorecard extraction from job descriptions, and bulk CV upload with parsing, OCR for scans and duplicate detection.
 
 ## Prerequisites
 
@@ -50,13 +50,14 @@ The web app runs on http://localhost:3000 and the API on http://localhost:4000. 
 
 ## AI configuration
 
-Scorecard extraction uses an OpenAI-compatible chat API. All three variables are optional; set them in `.env` only, never in code or tests.
+Scorecard extraction and CV parsing use an OpenAI-compatible chat API. All the variables are optional; set them in `.env` only, never in code or tests.
 
-| Variable       | Meaning                                                                   |
-| -------------- | ------------------------------------------------------------------------- |
-| `LLM_BASE_URL` | API base URL. Defaults to Groq: `https://api.groq.com/openai/v1`          |
-| `LLM_API_KEY`  | The provider key                                                          |
-| `LLM_MODEL`    | Model id. List the ones your key can use with `GET {LLM_BASE_URL}/models` |
+| Variable          | Meaning                                                                   |
+| ----------------- | ------------------------------------------------------------------------- |
+| `LLM_BASE_URL`    | API base URL. Defaults to Groq: `https://api.groq.com/openai/v1`          |
+| `LLM_API_KEY`     | The provider key                                                          |
+| `LLM_MODEL`       | Model id. List the ones your key can use with `GET {LLM_BASE_URL}/models` |
+| `LLM_PARSE_MODEL` | Model for reading CVs. Falls back to `LLM_MODEL`                          |
 
 Recommended model: `openai/gpt-oss-120b` on Groq. It accepts `json_schema` structured output and quotes the job description faithfully. The free tier allows about 8,000 tokens a minute, which is roughly three extractions a minute; a busier desk falls back to pattern matching and offers "Try AI again".
 
@@ -64,12 +65,40 @@ Without a key (or model) the app skips the AI and fills the scorecard with basic
 
 Useful scripts, run from the repository root:
 
-| Script                                         | What it does                                                                               |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `npm run eval:jd -w @hireproof/api`            | Compares extraction on `samples/jds` with the ground truth in `samples/manifest.json`      |
-| `npm run capture:scorecards -w @hireproof/api` | Runs the real model on the sample JDs and saves `apps/api/prisma/fixtures/scorecards.json` |
+| Script                                         | What it does                                                                                  |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `npm run eval:jd -w @hireproof/api`            | Compares extraction on `samples/jds` with the ground truth in `samples/manifest.json`         |
+| `npm run capture:scorecards -w @hireproof/api` | Runs the real model on the sample JDs and saves `apps/api/prisma/fixtures/scorecards.json`    |
+| `npm run eval:cv -w @hireproof/api`            | Parses `samples/cvs` and `samples/edge` and compares with the ground truth; prints tables     |
+| `npm run capture:cvs -w @hireproof/api`        | Runs the real CV pipeline (text, OCR, AI) and saves `apps/api/prisma/fixtures/cv-parses.json` |
 
-The seed creates four requisitions from the sample JDs, using the saved fixture when it exists and pattern matching otherwise.
+The seed creates four requisitions from the sample JDs, using the saved fixture when it exists and pattern matching otherwise. It then loads the sample CVs into those requisitions from `cv-parses.json`, with no model call and no OCR. Without that fixture it parses the text CVs with rules only and skips the scans.
+
+## CV upload and parsing
+
+A recruiter opens a requisition, chooses its Candidates tab and drops PDF or DOCX files in. The browser checks type and size first, then sends the files ten at a time. Everything the server accepts is queued and shows live status: Queued, Reading, Scanning (OCR), Parsing, then Done, Needs review, Failed or Duplicate file. The page can be left; the batch keeps going and shows again on return.
+
+| Limit | Value                                |
+| ----- | ------------------------------------ |
+| Types | PDF and DOCX, checked by magic bytes |
+| Size  | 10 MB a file                         |
+| Files | 10 a request, 500 a batch            |
+
+What happens to a CV (`apps/api/src/cv`):
+
+1. **Text.** The text layer of a PDF, or the paragraphs of a DOCX. A damaged, password protected or empty file fails with a plain reason.
+2. **OCR.** A PDF with under 100 characters of text per page is treated as a scan. Its first 3 pages are drawn to images (`unpdf` with `@napi-rs/canvas`, which ship prebuilt binaries for Windows and Linux) and read by `tesseract.js`. The English language data comes from the `@tesseract.js-data/eng` package, so nothing is fetched at run time. A page that reads below 80 confidence is read again after flattening the lighting and removing scanner speckle, and the better read is kept. A mean confidence under 70 adds the review reason "Scanned CV, text may be misread".
+3. **Rules.** Email, phone (last ten digits), skills from the shared dictionary, notice period, CTC and experience. Experience is computed from the date ranges in the CV, counting each calendar month once, with "Present" ending at the current month. Education sections are skipped. Notice and CTC keep the CV's own wording next to the parsed number.
+4. **AI.** A small JSON call for name, current role, location and total experience. The CV goes in as untrusted data between markers, without email, phone or personal-detail lines. Every value must appear in the CV text or it is dropped. Rules win for email, phone, skills, notice and CTC. If the AI and the computed experience differ by more than a year, the computed one is kept and the CV is flagged.
+5. **Without the AI** (no key, rate limited past the retry budget, invalid output twice) the CV is parsed from rules, the name comes from the top of the page, and the review reason is "Parsed without AI, check name and role". A CV never fails because of the AI.
+6. **Redaction.** `redactedText` drops the name, email, phone and any line or field for date of birth, age, gender, marital status, parents' names, religion, caste, nationality, passport, languages known and photo captions. Only `redactedText` is ever meant to be sent for scoring. The raw text and the original file stay so a recruiter can read the CV.
+7. **Duplicates**, in order. The same file bytes attach to the existing candidate and are marked as a duplicate file. The same email or the same phone attaches to the existing candidate and records a link with the reason. The same name with a very similar CV (three-word shingles, Jaccard 0.5 or more) creates a pending link for a recruiter to resolve with "Same person" or "Different people". Fuzzy matches are never merged automatically.
+
+### Queue and rate limits
+
+Jobs run on `pg-boss` inside the API process, so there is one service to deploy; move it to a worker process when volume needs it. Two CVs are read at a time. Every model call goes through one throttle: after each response it reads `x-ratelimit-remaining-tokens` and the reset header, waits for the reset when the budget is too low for the next call, and on a 429 waits for `retry-after` and retries up to three times before falling back to rules. Jobs survive a restart, and CVs left mid-run are queued again when the API starts.
+
+The CV files are stored in Postgres for now. Move them to object storage at real volume; deleting a candidate stays a single transaction while the bytes are here.
 
 ## Demo accounts
 
