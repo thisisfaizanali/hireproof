@@ -121,7 +121,7 @@ export function CandidateProfile({ id }: { id: string }) {
         ? notice(c.noticeText, c.noticeDays)
         : (c.noticeText ?? "Not stated"),
     ],
-    ["Pay", c.ctcText ? c.ctcText : "Not stated"],
+    ["CTC as written", c.ctcText ? c.ctcText : "Not stated"],
     ["Current CTC", lpa(c.currentCtcLpa) ?? "Not stated"],
     ["Expected CTC", lpa(c.expectedCtcLpa) ?? "Not stated"],
   ];

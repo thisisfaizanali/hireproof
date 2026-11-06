@@ -284,12 +284,18 @@ function CandidateTable({
                     {c.location ?? "location not stated"}
                   </span>
                   <span className="text-sm">
-                    <span className="num">
-                      {c.totalExperienceYears === null
-                        ? "Experience not stated"
-                        : `${c.totalExperienceYears} years`}
-                    </span>
-                    , notice {notice(c.noticeText, c.noticeDays).toLowerCase()}
+                    {c.totalExperienceYears === null ? (
+                      "Experience not stated"
+                    ) : (
+                      <>
+                        <span className="num">{c.totalExperienceYears}</span>{" "}
+                        years
+                      </>
+                    )}
+                    ,{" "}
+                    {c.noticeDays === null
+                      ? (c.noticeText ?? "notice not stated")
+                      : `notice ${notice(c.noticeText, c.noticeDays).toLowerCase()}`}
                   </span>
                   <Flags c={c} />
                 </Link>
