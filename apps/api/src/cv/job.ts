@@ -10,6 +10,7 @@ import {
 import { CvExtractError } from "./extract";
 import type { CvProfile } from "./merge";
 import { parseCv, type CvStage, type ParsedCv } from "./parse";
+import { queueScoring } from "../score/trigger";
 
 export interface JobDeps {
   ai: AskAi;
@@ -136,7 +137,7 @@ export async function persistParsed(
   parsed: ParsedCv,
 ) {
   const { profile } = parsed;
-  await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     await lockCandidates(tx);
     const known = await knownCandidates(tx, profile, cv.sha256, cv.id);
     const match: DuplicateMatch | null = findDuplicate(
@@ -168,7 +169,11 @@ export async function persistParsed(
         await tx.candidate.create({ data: newCandidateData(profile) })
       ).id;
     }
-    await ensureApplication(tx, candidateId, cv.requisitionId);
+    const application = await ensureApplication(
+      tx,
+      candidateId,
+      cv.requisitionId,
+    );
 
     await tx.cvDocument.update({
       where: { id: cv.id },
@@ -205,6 +210,7 @@ export async function persistParsed(
         ...parsed.run,
       },
     });
+    return application.id;
   });
 }
 
@@ -223,10 +229,14 @@ async function attachExactTwin(cv: {
     },
     orderBy: { createdAt: "asc" },
   });
-  if (!twin?.candidateId) return false;
+  if (!twin?.candidateId) return null;
   const candidateId = twin.candidateId;
-  await prisma.$transaction(async (tx) => {
-    await ensureApplication(tx, candidateId, cv.requisitionId);
+  return prisma.$transaction(async (tx) => {
+    const application = await ensureApplication(
+      tx,
+      candidateId,
+      cv.requisitionId,
+    );
     await tx.cvDocument.update({
       where: { id: cv.id },
       data: { candidateId, status: "DUPLICATE_FILE", reviewReasons: [] },
@@ -241,8 +251,8 @@ async function attachExactTwin(cv: {
         status: "AUTO_MERGED",
       },
     });
+    return application.id;
   });
-  return true;
 }
 
 const setStatus = (id: string, status: CvStage) =>
@@ -276,13 +286,19 @@ export async function processCv(cvId: string, deps: JobDeps = defaultDeps) {
   });
 
   try {
-    if (await attachExactTwin(cv)) return;
+    const twinned = await attachExactTwin(cv);
+    if (twinned) {
+      await queueScoring([twinned]);
+      return;
+    }
     const parsed = await parseCv(Buffer.from(cv.data), cv.fileName, {
       ai: deps.ai,
       today: deps.today(),
       onStage: (stage) => setStatus(cv.id, stage).then(() => undefined),
     });
-    await persistParsed(cv, parsed);
+    const applicationId = await persistParsed(cv, parsed);
+    // A new CV is new evidence, so an earlier score for it is replaced.
+    await queueScoring([applicationId], true);
   } catch (err) {
     if (err instanceof CvExtractError) {
       await fail(cv.id, err.message);

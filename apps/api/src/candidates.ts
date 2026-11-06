@@ -15,6 +15,7 @@ import { mergedFields } from "./cv/job";
 import type { CvProfile } from "./cv/merge";
 import { prisma } from "./db";
 import type { Prisma } from "./generated/prisma/client";
+import { queueCandidate } from "./score/trigger";
 
 export const candidates = Router();
 
@@ -423,6 +424,8 @@ candidates.post(
       res.status(409).json({ error: "This duplicate was already resolved." });
       return;
     }
+    // The merged candidate has a newer CV and fuller details to score on.
+    if (samePerson) await queueCandidate(link.candidateId);
 
     await audit({
       action: "DUPLICATE_RESOLVED",
