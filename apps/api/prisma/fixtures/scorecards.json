@@ -1,0 +1,317 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "capturedAt": "2026-11-06",
+  "scorecards": {
+    "kestrel-senior-java": {
+      "scorecard": {
+        "title": "Senior Java Developer",
+        "criteria": [
+          {
+            "kind": "MUST_HAVE",
+            "label": "Java",
+            "sourceQuote": "Java (8 or above)",
+            "needsReview": false
+          },
+          {
+            "kind": "MUST_HAVE",
+            "label": "Spring Boot",
+            "sourceQuote": "Spring Boot",
+            "needsReview": false
+          },
+          {
+            "kind": "MUST_HAVE",
+            "label": "Microservices",
+            "sourceQuote": "Microservices architecture",
+            "needsReview": false
+          },
+          {
+            "kind": "MUST_HAVE",
+            "label": "REST API design and development",
+            "sourceQuote": "REST API design and development",
+            "needsReview": false
+          },
+          {
+            "kind": "MUST_HAVE",
+            "label": "SQL",
+            "sourceQuote": "SQL and at least one relational database",
+            "needsReview": false
+          },
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "Kafka",
+            "sourceQuote": "Apache Kafka or another message broker",
+            "needsReview": false
+          },
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "AWS",
+            "sourceQuote": null,
+            "needsReview": true
+          },
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "Docker",
+            "sourceQuote": "Docker and container based deployment",
+            "needsReview": false
+          }
+        ],
+        "experience": {
+          "minYears": 5,
+          "maxYears": 8,
+          "sourceQuote": "Experience: 5 to 8 years of relevant experience",
+          "needsReview": false
+        },
+        "notice": {
+          "maxDays": 60,
+          "sourceQuote": "Notice period: up to 60 days. Candidates who can join earlier are preferred.",
+          "needsReview": false
+        },
+        "ctc": {
+          "maxLpa": 26,
+          "sourceQuote": "Budget: 18 to 26 LPA, based on experience and interview performance",
+          "needsReview": false
+        },
+        "locations": {
+          "values": [
+            "Noida"
+          ],
+          "sourceQuote": "Location: Noida (hybrid, three days in office)",
+          "needsReview": false
+        },
+        "ambiguities": []
+      },
+      "source": "AI"
+    },
+    "sahyadri-kyc-analyst": {
+      "scorecard": {
+        "title": "KYC Analyst",
+        "criteria": [
+          {
+            "kind": "MUST_HAVE",
+            "label": "KYC",
+            "sourceQuote": "KYC processes and documentation for individual and non-individual customers",
+            "needsReview": false
+          },
+          {
+            "kind": "MUST_HAVE",
+            "label": "AML checks",
+            "sourceQuote": "AML checks and screening",
+            "needsReview": false
+          },
+          {
+            "kind": "MUST_HAVE",
+            "label": "MS Excel",
+            "sourceQuote": "Working knowledge of Excel (filters, lookups, pivot tables)",
+            "needsReview": false
+          },
+          {
+            "kind": "MUST_HAVE",
+            "label": "Communication",
+            "sourceQuote": "Good written communication",
+            "needsReview": false
+          },
+          {
+            "kind": "MUST_HAVE",
+            "label": "Graduate",
+            "sourceQuote": "Graduate in any stream. B.Com, BBA or BA preferred.",
+            "needsReview": false
+          },
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "Customer due diligence",
+            "sourceQuote": "Customer due diligence experience in a bank, NBFC or fintech",
+            "needsReview": false
+          },
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "Sanctions screening tools",
+            "sourceQuote": "Exposure to sanctions screening tools",
+            "needsReview": false
+          }
+        ],
+        "experience": {
+          "minYears": 2,
+          "maxYears": 4,
+          "sourceQuote": "Experience required: 2 to 4 years in KYC or customer verification",
+          "needsReview": false
+        },
+        "notice": {
+          "maxDays": 30,
+          "sourceQuote": "Notice period: up to 30 days",
+          "needsReview": false
+        },
+        "ctc": {
+          "maxLpa": 8,
+          "sourceQuote": "CTC budget: 5 to 8 LPA",
+          "needsReview": false
+        },
+        "locations": {
+          "values": [
+            "Pune",
+            "Noida"
+          ],
+          "sourceQuote": "Location: Pune or Noida",
+          "needsReview": false
+        },
+        "ambiguities": [
+          "The qualification mentions 'Graduate in any stream' as required but also lists specific degrees as preferred, unclear if a specific degree is mandatory."
+        ]
+      },
+      "source": "AI"
+    },
+    "marigold-store-ops": {
+      "scorecard": {
+        "title": "Store Operations Manager",
+        "criteria": [
+          {
+            "kind": "MUST_HAVE",
+            "label": "Full store ownership",
+            "sourceQuote": "run a full store and not just the sales floor, so they should be comfortable owning the store P&L",
+            "needsReview": false
+          },
+          {
+            "kind": "MUST_HAVE",
+            "label": "Cycle counts and replenishment planning",
+            "sourceQuote": "cycle counts and replenishment planning must be strong",
+            "needsReview": false
+          },
+          {
+            "kind": "MUST_HAVE",
+            "label": "People handling and rostering",
+            "sourceQuote": "people handling and rostering is a must",
+            "needsReview": false
+          },
+          {
+            "kind": "MUST_HAVE",
+            "label": "Store manager experience",
+            "sourceQuote": "at least 3 years as a store manager",
+            "needsReview": false
+          },
+          {
+            "kind": "MUST_HAVE",
+            "label": "Graduate",
+            "sourceQuote": "Graduate is fine",
+            "needsReview": false
+          },
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "Retail domain experience",
+            "sourceQuote": "someone from organised retail, apparel or lifestyle or even grocery format is ok",
+            "needsReview": false
+          },
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "POS knowledge",
+            "sourceQuote": "Knowing the POS and billing software is good",
+            "needsReview": false
+          },
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "Visual merchandising",
+            "sourceQuote": "visual merchandising knowledge is an added plus but not compulsory",
+            "needsReview": false
+          }
+        ],
+        "experience": {
+          "minYears": 6,
+          "maxYears": 10,
+          "sourceQuote": "6 to 10 years in retail",
+          "needsReview": false
+        },
+        "notice": {
+          "maxDays": null,
+          "sourceQuote": null,
+          "needsReview": false
+        },
+        "ctc": {
+          "maxLpa": null,
+          "sourceQuote": null,
+          "needsReview": false
+        },
+        "locations": {
+          "values": [
+            "Gurugram",
+            "Noida",
+            "Delhi"
+          ],
+          "sourceQuote": "Gurugram preferred but Noida and Delhi are also fine",
+          "needsReview": false
+        },
+        "ambiguities": [
+          "CTC is not specified as a numeric amount.",
+          "Notice period requirement is not mentioned.",
+          "The education requirement only states 'Graduate is fine' without specifying if it is mandatory.",
+          "The preference for retail domain experience is described as ideal but not marked as required.",
+          "POS and billing software knowledge is described as good, but it is unclear if it is mandatory."
+        ]
+      },
+      "source": "AI"
+    },
+    "kestrel-java-developer": {
+      "scorecard": {
+        "title": "Java Developer",
+        "criteria": [
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "Java",
+            "sourceQuote": "Java Developer with 3 to 5 years of experience",
+            "needsReview": false
+          },
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "Hibernate",
+            "sourceQuote": "Hibernate and REST APIs",
+            "needsReview": false
+          },
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "REST APIs",
+            "sourceQuote": "Hibernate and REST APIs",
+            "needsReview": false
+          },
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "Banking",
+            "sourceQuote": "Work on enterprise application modules for a banking customer",
+            "needsReview": false
+          },
+          {
+            "kind": "NICE_TO_HAVE",
+            "label": "Communication",
+            "sourceQuote": "Good communication skills",
+            "needsReview": false
+          }
+        ],
+        "experience": {
+          "minYears": 3,
+          "maxYears": 5,
+          "sourceQuote": "Java Developer with 3 to 5 years of experience",
+          "needsReview": false
+        },
+        "notice": {
+          "maxDays": null,
+          "sourceQuote": null,
+          "needsReview": false
+        },
+        "ctc": {
+          "maxLpa": null,
+          "sourceQuote": null,
+          "needsReview": false
+        },
+        "locations": {
+          "values": [
+            "Noida"
+          ],
+          "sourceQuote": "Kestrel Infotech, Noida",
+          "needsReview": false
+        },
+        "ambiguities": [
+          "Notice period is not specified.",
+          "CTC / salary range is not provided.",
+          "The requirement kinds are not explicitly marked as required or optional."
+        ]
+      },
+      "source": "AI"
+    }
+  }
+}
