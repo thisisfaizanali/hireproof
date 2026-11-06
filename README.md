@@ -58,6 +58,8 @@ Scorecard extraction uses an OpenAI-compatible chat API. All three variables are
 | `LLM_API_KEY`  | The provider key                                                          |
 | `LLM_MODEL`    | Model id. List the ones your key can use with `GET {LLM_BASE_URL}/models` |
 
+Recommended model: `openai/gpt-oss-120b` on Groq. It accepts `json_schema` structured output and quotes the job description faithfully. The free tier allows about 8,000 tokens a minute, which is roughly three extractions a minute; a busier desk falls back to pattern matching and offers "Try AI again".
+
 Without a key (or model) the app skips the AI and fills the scorecard with basic pattern matching, and says so on the requisition. Every AI answer is checked in code: each quote must exist in the job description, numbers must be plausible, and nothing is final until a recruiter confirms it. Each attempt is recorded in `AiRun` (model, outcome, latency, token counts; never the job description text).
 
 Useful scripts, run from the repository root:
