@@ -57,7 +57,7 @@ const plainJson = new Set<string>();
 export function parseDuration(value: string | null | undefined) {
   if (!value) return null;
   const match =
-    /^(?:(d+(?:.d+)?)h)?(?:(d+(?:.d+)?)m(?!s))?(?:(d+(?:.d+)?)s)?(?:(d+(?:.d+)?)ms)?$/.exec(
+    /^(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)m(?!s))?(?:(\d+(?:\.\d+)?)s)?(?:(\d+(?:\.\d+)?)ms)?$/.exec(
       value.trim(),
     );
   if (!match || !match[0]) return null;
