@@ -34,6 +34,7 @@ interface Form {
   maxDays: string;
   maxLpa: string;
   locations: string[];
+  reviewed: string[];
 }
 
 const text = (n: number | null) => (n === null ? "" : String(n));
@@ -48,6 +49,7 @@ function toForm(d: RequisitionDetail): Form {
     maxDays: text(s.notice.maxDays),
     maxLpa: text(s.ctc.maxLpa),
     locations: [...s.locations.values],
+    reviewed: [],
   };
 }
 
@@ -198,7 +200,16 @@ export function RequisitionView({
       {
         method: "PUT",
         json: {
-          criteria: form.criteria,
+          criteria: form.criteria.map((c) => ({
+            ...c,
+            reviewed: !!c.id && form.reviewed.includes(c.id),
+          })),
+          reviewed: {
+            experience: form.reviewed.includes("experience"),
+            notice: form.reviewed.includes("notice"),
+            ctc: form.reviewed.includes("ctc"),
+            locations: form.reviewed.includes("locations"),
+          },
           experience: {
             minYears: num(form.minYears),
             maxYears: num(form.maxYears),
@@ -275,11 +286,46 @@ export function RequisitionView({
       !!was &&
       was.needsReview &&
       was.label === item.label &&
-      was.kind === item.kind
+      was.kind === item.kind &&
+      !form.reviewed.includes(item.id!)
     );
   };
   const sameNumber = (value: string, saved: number | null) =>
     num(value) === saved;
+  const markReviewed = (key: string) =>
+    update({ reviewed: [...form.reviewed, key] });
+  const open = (key: string, flagged: boolean) =>
+    flagged && !form.reviewed.includes(key);
+  const flags = {
+    experience: open(
+      "experience",
+      card.experience.needsReview &&
+        sameNumber(form.minYears, card.experience.minYears) &&
+        sameNumber(form.maxYears, card.experience.maxYears) &&
+        (form.minYears !== "" || form.maxYears !== ""),
+    ),
+    notice: open(
+      "notice",
+      card.notice.needsReview &&
+        form.maxDays !== "" &&
+        sameNumber(form.maxDays, card.notice.maxDays),
+    ),
+    ctc: open(
+      "ctc",
+      card.ctc.needsReview &&
+        form.maxLpa !== "" &&
+        sameNumber(form.maxLpa, card.ctc.maxLpa),
+    ),
+    locations: open(
+      "locations",
+      card.locations.needsReview &&
+        form.locations.length > 0 &&
+        form.locations.join("|") === card.locations.values.join("|"),
+    ),
+  };
+  const pending =
+    form.criteria.filter(itemReview).length +
+    Object.values(flags).filter(Boolean).length;
 
   const readOnly = !canEdit || busy !== null;
 
@@ -370,6 +416,7 @@ export function RequisitionView({
               items={form.criteria}
               readOnly={readOnly}
               reviewOf={itemReview}
+              onReviewed={(item) => markReviewed(item.id!)}
               quoteOf={(item) =>
                 item.id ? (original.get(item.id)?.sourceQuote ?? null) : null
               }
@@ -409,10 +456,8 @@ export function RequisitionView({
                 value={form.minYears}
                 error={errors["experience.minYears"]}
                 readOnly={readOnly}
-                review={
-                  card.experience.needsReview &&
-                  sameNumber(form.minYears, card.experience.minYears)
-                }
+                review={flags.experience}
+                onReviewed={() => markReviewed("experience")}
                 quote={card.experience.sourceQuote}
                 onFocusQuote={setQuote}
                 onChange={(v) => update({ minYears: v })}
@@ -423,10 +468,8 @@ export function RequisitionView({
                 value={form.maxYears}
                 error={errors["experience.maxYears"]}
                 readOnly={readOnly}
-                review={
-                  card.experience.needsReview &&
-                  sameNumber(form.maxYears, card.experience.maxYears)
-                }
+                review={flags.experience}
+                onReviewed={() => markReviewed("experience")}
                 quote={card.experience.sourceQuote}
                 onFocusQuote={setQuote}
                 onChange={(v) => update({ maxYears: v })}
@@ -437,10 +480,8 @@ export function RequisitionView({
                 value={form.maxDays}
                 error={errors["notice.maxDays"]}
                 readOnly={readOnly}
-                review={
-                  card.notice.needsReview &&
-                  sameNumber(form.maxDays, card.notice.maxDays)
-                }
+                review={flags.notice}
+                onReviewed={() => markReviewed("notice")}
                 quote={card.notice.sourceQuote}
                 onFocusQuote={setQuote}
                 onChange={(v) => update({ maxDays: v })}
@@ -451,10 +492,8 @@ export function RequisitionView({
                 value={form.maxLpa}
                 error={errors["ctc.maxLpa"]}
                 readOnly={readOnly}
-                review={
-                  card.ctc.needsReview &&
-                  sameNumber(form.maxLpa, card.ctc.maxLpa)
-                }
+                review={flags.ctc}
+                onReviewed={() => markReviewed("ctc")}
                 quote={card.ctc.sourceQuote}
                 onFocusQuote={setQuote}
                 onChange={(v) => update({ maxLpa: v })}
@@ -463,10 +502,8 @@ export function RequisitionView({
             <Locations
               values={form.locations}
               readOnly={readOnly}
-              review={
-                card.locations.needsReview &&
-                form.locations.join("|") === card.locations.values.join("|")
-              }
+              review={flags.locations}
+              onReviewed={() => markReviewed("locations")}
               quote={card.locations.sourceQuote}
               onFocusQuote={setQuote}
               onChange={(locations) => update({ locations })}
@@ -484,7 +521,8 @@ export function RequisitionView({
                   {busy === "save" ? "Saving" : "Save draft"}
                 </Button>
                 <Button
-                  disabled={busy !== null}
+                  disabled={busy !== null || pending > 0}
+                  aria-describedby="pending-hint"
                   onClick={() => void save(true)}
                 >
                   {busy === "confirm" ? "Confirming" : "Confirm scorecard"}
@@ -499,6 +537,11 @@ export function RequisitionView({
                   </Button>
                 )}
               </div>
+              <p id="pending-hint" className="text-sm text-review">
+                {pending > 0
+                  ? `${pending} ${pending === 1 ? "item still needs" : "items still need"} review`
+                  : ""}
+              </p>
               <p
                 role={notice?.tone === "error" ? "alert" : "status"}
                 className={`text-sm ${notice?.tone === "error" ? "text-destructive" : "text-success"}`}
@@ -538,15 +581,22 @@ export function RequisitionView({
 function QuoteLine({
   quote,
   review,
+  onReviewed,
 }: {
   quote: string | null;
   review: boolean;
+  onReviewed?: () => void;
 }) {
   return (
     <div className="flex flex-col gap-1 text-sm">
       {review && (
-        <span>
+        <span className="flex flex-wrap items-center gap-2">
           <NeedsReview />
+          {onReviewed && (
+            <Button variant="outline" size="sm" onClick={onReviewed}>
+              Looks right
+            </Button>
+          )}
         </span>
       )}
       {quote ? (
@@ -572,6 +622,7 @@ function CriteriaList({
   items,
   readOnly,
   reviewOf,
+  onReviewed,
   quoteOf,
   onFocusQuote,
   onChange,
@@ -583,6 +634,7 @@ function CriteriaList({
   items: Item[];
   readOnly: boolean;
   reviewOf: (item: Item) => boolean;
+  onReviewed: (item: Item) => void;
   quoteOf: (item: Item) => string | null;
   onFocusQuote: (quote: string | null) => void;
   onChange: (index: number, label: string) => void;
@@ -646,7 +698,11 @@ function CriteriaList({
                 </>
               )}
             </div>
-            <QuoteLine quote={quoteOf(item)} review={reviewOf(item)} />
+            <QuoteLine
+              quote={quoteOf(item)}
+              review={reviewOf(item)}
+              onReviewed={readOnly ? undefined : () => onReviewed(item)}
+            />
           </li>
         ))}
       </ul>
@@ -684,6 +740,7 @@ function Constraint({
   error,
   readOnly,
   review,
+  onReviewed,
   quote,
   onFocusQuote,
   onChange,
@@ -694,6 +751,7 @@ function Constraint({
   error?: string;
   readOnly: boolean;
   review: boolean;
+  onReviewed: () => void;
   quote: string | null;
   onFocusQuote: (quote: string | null) => void;
   onChange: (value: string) => void;
@@ -722,6 +780,7 @@ function Constraint({
       <QuoteLine
         quote={value === "" ? null : quote}
         review={review && value !== ""}
+        onReviewed={readOnly ? undefined : onReviewed}
       />
     </div>
   );
@@ -731,6 +790,7 @@ function Locations({
   values,
   readOnly,
   review,
+  onReviewed,
   quote,
   onFocusQuote,
   onChange,
@@ -738,6 +798,7 @@ function Locations({
   values: string[];
   readOnly: boolean;
   review: boolean;
+  onReviewed: () => void;
   quote: string | null;
   onFocusQuote: (quote: string | null) => void;
   onChange: (values: string[]) => void;
@@ -804,6 +865,7 @@ function Locations({
       <QuoteLine
         quote={values.length ? quote : null}
         review={review && values.length > 0}
+        onReviewed={readOnly ? undefined : onReviewed}
       />
     </div>
   );
