@@ -2,10 +2,12 @@ import cookieParser from "cookie-parser";
 import express, { type ErrorRequestHandler } from "express";
 import helmet from "helmet";
 import { auth } from "./auth";
+import { candidates } from "./candidates";
 import { clients } from "./clients";
 import { env } from "./env";
 import { health } from "./health";
 import { requisitions } from "./requisitions";
+import { uploads } from "./uploads";
 
 export const app = express();
 
@@ -18,7 +20,10 @@ app.use(cookieParser());
 
 // Multipart is how the browser uploads a file. Only these routes accept it, and
 // only with a header that a cross-site form cannot set.
-const MULTIPART_ROUTES = new Set(["POST /api/requisitions"]);
+const MULTIPART_ROUTES = [
+  /^POST \/api\/requisitions$/,
+  /^POST \/api\/uploads\/[^/]+\/files$/,
+];
 
 // SameSite=Lax keeps the session cookie off cross-site POSTs. This also rejects
 // state-changing requests that are not JSON, since a cross-site page cannot send
@@ -28,7 +33,9 @@ app.use("/api", (req, res, next) => {
   const isJson = /^application\/json\b/i.test(type);
   const isUpload =
     /^multipart\/form-data\b/i.test(type) &&
-    MULTIPART_ROUTES.has(`${req.method} ${req.baseUrl}${req.path}`) &&
+    MULTIPART_ROUTES.some((route) =>
+      route.test(`${req.method} ${req.baseUrl}${req.path}`),
+    ) &&
     req.get("x-requested-with") === "hireproof";
   if (req.method === "GET" || req.method === "HEAD" || isJson || isUpload) {
     next();
@@ -41,6 +48,8 @@ app.use(health);
 app.use(auth);
 app.use(clients);
 app.use(requisitions);
+app.use(uploads);
+app.use(candidates);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });

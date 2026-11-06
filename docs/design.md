@@ -73,6 +73,14 @@ Scale, ratio 1.2 from a 16px body. Body text is never smaller than 16px.
 - Focus is a 2px outline in `ring`, offset 2px, shown instantly on keyboard focus.
 - Disabled controls use 55% opacity, `not-allowed` cursor and the native attribute.
 
+## Candidate screens
+
+- The requisition page has two tabs, Scorecard and Candidates, as a tab strip with a ruled bottom edge. The current tab takes `primary-soft` and a 2px `primary` underline. The tab is kept in the URL (`?tab=candidates`).
+- Upload is a dashed panel, not a modal. Progress is a native `progress` bar with a text label. Per-file status is a label plus its plain reason, never colour alone. The finished file list collapses into a disclosure so the candidate list stays in view.
+- The candidate list is a dense table from 48rem and stacked rows below it. Flags (Scan, Needs review, Possible duplicate) are text labels. Needs review uses the `review` colour, a possible duplicate uses `warning`.
+- A possible duplicate is shown as two panels side by side, "This CV" and "Already on file", with the same rows in each so differences read across. The two actions sit under both, and "Same person" is the filled button.
+- Review reasons on the profile are a list in `review` on `review-soft`, headed by the words "Needs review".
+
 ## Voice
 
 Plain and specific, in the staffing firm's own words: requisition, shortlist, notice period, CTC. Empty states say what belongs there and what fills it, in a full sentence with a full stop. No exclamation marks, no marketing verbs.

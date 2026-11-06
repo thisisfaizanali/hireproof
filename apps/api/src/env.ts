@@ -16,6 +16,8 @@ const Env = z.object({
   ),
   LLM_API_KEY: z.preprocess(blankAsUnset, z.string().optional()),
   LLM_MODEL: z.preprocess(blankAsUnset, z.string().optional()),
+  // Model for reading CVs; falls back to LLM_MODEL.
+  LLM_PARSE_MODEL: z.preprocess(blankAsUnset, z.string().optional()),
 });
 
 function loadEnv(source: NodeJS.ProcessEnv = process.env) {

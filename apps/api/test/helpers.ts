@@ -14,7 +14,7 @@ export async function resetDb() {
   if (!dbName.endsWith("_test") && !process.env.TEST_DATABASE_URL) {
     throw new Error(`Refusing to truncate ${dbName}: not a test database`);
   }
-  await prisma.$executeRaw`TRUNCATE "AuditEvent", "Session", "User", "Client" CASCADE`;
+  await prisma.$executeRaw`TRUNCATE "AuditEvent", "Session", "User", "Client", "Candidate" CASCADE`;
 }
 
 export async function createUser(role: Role, password?: string) {
