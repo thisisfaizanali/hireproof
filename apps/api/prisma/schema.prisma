@@ -324,6 +324,7 @@ model DuplicateLink {
   candidate    Candidate       @relation(fields: [candidateId], references: [id])
   kind         DuplicateKind
   similarity   Float?
+  reason       String          @default("")
   status       DuplicateStatus
   resolvedById String?
   resolvedBy   User?           @relation(fields: [resolvedById], references: [id])
