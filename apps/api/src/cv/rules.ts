@@ -177,7 +177,7 @@ const MONTH_NAME = String.raw`(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec
 const MONTH_YEAR = String.raw`(?:${MONTH_NAME}['’\s]*(?:\d{4}|\d{2})(?!\d)|\d{1,2}/\d{4})`;
 const OPEN_END = String.raw`(?:present|current|till\s+date|to\s+date|till\s+now|ongoing|now)`;
 const RANGE = new RegExp(
-  String.raw`(?<![\d/])(${MONTH_YEAR})\s*(?:–|—|-|to|until)\s*(${MONTH_YEAR}|${OPEN_END})`,
+  String.raw`(?<![\d/])(${MONTH_YEAR})\s*(?:\u2013|\u2014|-|to|until)\s*(${MONTH_YEAR}|${OPEN_END})`,
   "gi",
 );
 const OPEN_END_ONLY = new RegExp(`^${OPEN_END}$`, "i");

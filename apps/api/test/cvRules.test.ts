@@ -70,6 +70,16 @@ describe("experience from dates", () => {
     ).toBeNull();
   });
 
+  it("reads a range joined by an em dash, as OCR often writes it", () => {
+    const dash = String.fromCharCode(0x2014);
+    expect(
+      computeExperience(
+        `Developer, Acme, Noida Aug 2023 ${dash} Present`,
+        today,
+      ),
+    ).toBe(3.3);
+  });
+
   it("returns null when there are no dated roles", () => {
     expect(
       computeExperience("Fresh graduate, 2026 (8.4 CGPA)", today),
