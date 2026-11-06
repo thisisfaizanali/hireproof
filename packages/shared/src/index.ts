@@ -91,3 +91,4 @@ export const DEMO_USERS: {
 
 export * from "./scorecard";
 export * from "./skills";
+export * from "./cv";
