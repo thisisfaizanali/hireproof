@@ -14,6 +14,25 @@ const mark = (got: unknown, want: unknown) =>
   same(got, want)
     ? "ok"
     : `got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`;
+const NCR = [
+  "delhi",
+  "new delhi",
+  "gurugram",
+  "noida",
+  "ghaziabad",
+  "faridabad",
+];
+// A found place matches the truth when equal to it or inside it (NCR covers its cities).
+const inside = (place: string, area: string) =>
+  place === area || (area === "ncr" && NCR.includes(place));
+const placesMatch = (got: string[], want: string[]) => {
+  const g = got.map((v) => v.toLowerCase());
+  const w = want.map((v) => v.toLowerCase());
+  return (
+    g.every((p) => w.some((a) => inside(p, a))) &&
+    w.every((a) => g.some((p) => inside(p, a)))
+  );
+};
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
 async function main() {
@@ -39,10 +58,9 @@ async function main() {
       expMax: mark(s.experience.maxYears, jd.experienceMaxYears),
       notice: mark(s.notice.maxDays, jd.noticeMaxDays),
       ctc: mark(s.ctc.maxLpa, jd.ctcBudgetLpa?.max ?? null),
-      locations: mark(
-        s.locations.values.map((v) => v.toLowerCase()).sort(),
-        jd.locations.map((v) => v.toLowerCase()).sort(),
-      ),
+      locations: placesMatch(s.locations.values, jd.locations)
+        ? "ok"
+        : `got ${JSON.stringify(s.locations.values)}, want ${JSON.stringify(jd.locations)}`,
       "must recall": pct(want.size ? hits / want.size : 1),
       "must precision": must.size ? pct(hits / must.size) : "n/a",
       "recall, any kind": pct(want.size ? anyHits / want.size : 1),
