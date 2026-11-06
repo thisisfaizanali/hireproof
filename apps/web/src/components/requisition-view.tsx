@@ -8,6 +8,7 @@ import {
   type RequisitionDetail,
   type RequisitionStatus,
 } from "@hireproof/shared";
+import { CandidatesTab } from "@/components/candidates-tab";
 import { EmptyState } from "@/components/empty-state";
 import {
   NeedsReview,
@@ -85,13 +86,18 @@ type Load =
   | { state: "error"; message: string; notFound: boolean }
   | { state: "ready" };
 
+type Tab = "scorecard" | "candidates";
+
 export function RequisitionView({
   id,
   canEdit,
+  initialTab = "scorecard",
 }: {
   id: string;
   canEdit: boolean;
+  initialTab?: Tab;
 }) {
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [detail, setDetail] = useState<RequisitionDetail | null>(null);
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [form, setForm] = useState<Form | null>(null);
@@ -368,7 +374,64 @@ export function RequisitionView({
         </div>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+      <div
+        role="tablist"
+        aria-label="Requisition"
+        className="flex gap-1 border-b border-border"
+      >
+        {(
+          [
+            ["scorecard", "Scorecard"],
+            ["candidates", "Candidates"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            id={`tab-${key}`}
+            aria-selected={tab === key}
+            aria-controls={`panel-${key}`}
+            onClick={() => {
+              setTab(key);
+              window.history.replaceState(
+                null,
+                "",
+                key === "scorecard" ? window.location.pathname : `?tab=${key}`,
+              );
+            }}
+            className={`-mb-px h-10 border-b-2 px-4 text-sm font-medium transition-colors duration-(--dur-micro) pointer-coarse:h-11 ${
+              tab === key
+                ? "border-primary bg-primary-soft"
+                : "border-transparent hover:bg-accent"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "candidates" && (
+        <div
+          role="tabpanel"
+          id="panel-candidates"
+          aria-labelledby="tab-candidates"
+        >
+          <CandidatesTab
+            requisitionId={id}
+            canEdit={canEdit}
+            scorecardConfirmed={card.status === "CONFIRMED"}
+          />
+        </div>
+      )}
+
+      <div
+        role="tabpanel"
+        id="panel-scorecard"
+        aria-labelledby="tab-scorecard"
+        hidden={tab !== "scorecard"}
+        className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]"
+      >
         <div className="flex min-w-0 flex-col gap-8">
           {card.status === "DRAFT" && card.source === "AI" && (
             <p className="rounded-md bg-review-soft px-4 py-3 text-sm text-review">
