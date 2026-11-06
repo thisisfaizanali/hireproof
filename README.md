@@ -2,7 +2,7 @@
 
 Hireproof is a resume screening tool for staffing firms. Recruiters create a job requisition, the AI extracts a scorecard from the job description, and recruiters bulk-upload CVs. Each CV is scored against the scorecard with evidence quoted from the CV. Recruiters then submit candidates to a client portal, and a pipeline tracks each requisition.
 
-This repository currently holds the foundation: a web app with sign-in and role-based shells, an API with session authentication, a shared schema package and a local database.
+This repository holds the foundation (sign-in, role-based shells, API, shared schemas, local database) and requisitions with scorecard extraction from job descriptions.
 
 ## Prerequisites
 
@@ -47,6 +47,27 @@ npm run dev
 If port 5432 is already in use on your machine, set `POSTGRES_PORT` in `.env` and use the same port in `DATABASE_URL`.
 
 The web app runs on http://localhost:3000 and the API on http://localhost:4000. The browser only talks to the web origin, which proxies `/api` to the API, so the session cookie is first-party.
+
+## AI configuration
+
+Scorecard extraction uses an OpenAI-compatible chat API. All three variables are optional; set them in `.env` only, never in code or tests.
+
+| Variable       | Meaning                                                                   |
+| -------------- | ------------------------------------------------------------------------- |
+| `LLM_BASE_URL` | API base URL. Defaults to Groq: `https://api.groq.com/openai/v1`          |
+| `LLM_API_KEY`  | The provider key                                                          |
+| `LLM_MODEL`    | Model id. List the ones your key can use with `GET {LLM_BASE_URL}/models` |
+
+Without a key (or model) the app skips the AI and fills the scorecard with basic pattern matching, and says so on the requisition. Every AI answer is checked in code: each quote must exist in the job description, numbers must be plausible, and nothing is final until a recruiter confirms it. Each attempt is recorded in `AiRun` (model, outcome, latency, token counts; never the job description text).
+
+Useful scripts, run from the repository root:
+
+| Script                                         | What it does                                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `npm run eval:jd -w @hireproof/api`            | Compares extraction on `samples/jds` with the ground truth in `samples/manifest.json`      |
+| `npm run capture:scorecards -w @hireproof/api` | Runs the real model on the sample JDs and saves `apps/api/prisma/fixtures/scorecards.json` |
+
+The seed creates four requisitions from the sample JDs, using the saved fixture when it exists and pattern matching otherwise.
 
 ## Demo accounts
 
