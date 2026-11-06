@@ -45,7 +45,10 @@ async function seedRequisitions() {
     );
   }
   const recruiters = await prisma.user.findMany({
-    where: { role: "RECRUITER" },
+    where: {
+      role: "RECRUITER",
+      email: { in: DEMO_USERS.map((u) => u.email) },
+    },
     orderBy: { email: "asc" },
   });
 
