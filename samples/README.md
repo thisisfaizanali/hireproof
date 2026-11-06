@@ -20,7 +20,7 @@ Realistic input files for building and demoing Hireproof: job descriptions to ex
 | `Kestrel_Senior_Java_Developer_JD.docx`   | Kestrel Infotech | Senior Java Developer      | 5 to 8 years, Spring Boot, Noida, notice up to 60 days, 18 to 26 LPA                  |
 | `Sahyadri_Finserv_KYC_Analyst_JD.pdf`     | Sahyadri Finserv | KYC Analyst                | 2 to 4 years, KYC, AML checks, Excel, Pune or Noida, notice up to 30 days, 5 to 8 LPA |
 | `FW_ urgent requirement store ops manager.txt` | Marigold Retail | Store Operations Manager | A pasted email. Requirements are buried in prose, CTC is "as per market" (no number)  |
-| `Kestrel_Java_Developer_JD_short.docx`    | Kestrel Infotech | Java Developer             | Sparse on purpose: no notice period, no CTC, no nice-to-haves                         |
+| `Kestrel_Java_Developer_JD_short.docx`    | Kestrel Infotech | Java Developer             | Sparse on purpose: no notice period, no CTC, no must-haves (Java, Hibernate and REST APIs are nice-to-haves) |
 
 ### CVs by requisition
 
