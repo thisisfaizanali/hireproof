@@ -368,49 +368,62 @@ export function CvUpload({
               </p>
             )}
           </div>
-          <ul className="max-h-96 overflow-y-auto border-t border-border">
-            {rows.map((row) => (
-              <li
-                key={row.key}
-                className="flex flex-col gap-1 border-b border-border py-2 sm:flex-row sm:items-start sm:gap-4"
-              >
-                <span className="min-w-0 break-words text-sm font-medium sm:w-1/3">
-                  {row.fileName}
-                </span>
-                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
-                  {row.stage === "UPLOADING" ? (
-                    <span className="inline-block rounded-sm bg-muted px-2 py-0.5 text-xs font-medium">
-                      Uploading
-                    </span>
-                  ) : row.stage === "REJECTED" ? (
-                    <span className="inline-block rounded-sm bg-destructive-soft px-2 py-0.5 text-xs font-medium text-destructive">
-                      Not accepted
-                    </span>
-                  ) : (
-                    <CvStatusLabel status={row.stage} />
-                  )}
-                  {row.note && (
-                    <span className="text-sm text-muted-foreground">
-                      {row.note}
-                    </span>
-                  )}
-                  {canUpload &&
-                    row.cvId &&
-                    (row.stage === "FAILED" ||
-                      row.stage === "NEEDS_REVIEW") && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void retry(row.cvId!)}
-                        aria-label={`Run ${row.fileName} again`}
-                      >
-                        Run again
-                      </Button>
+          <details
+            open={
+              working ||
+              rows.some(
+                (r) => r.stage !== "PARSED" && r.stage !== "DUPLICATE_FILE",
+              )
+            }
+            className="rounded-md border border-border bg-card"
+          >
+            <summary className="cursor-pointer px-4 py-2 text-sm font-medium">
+              Files in this upload
+            </summary>
+            <ul className="max-h-96 overflow-y-auto border-t border-border px-4">
+              {rows.map((row) => (
+                <li
+                  key={row.key}
+                  className="flex flex-col gap-1 border-b border-border py-2 sm:flex-row sm:items-start sm:gap-4"
+                >
+                  <span className="min-w-0 break-words text-sm font-medium sm:w-1/3">
+                    {row.fileName}
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+                    {row.stage === "UPLOADING" ? (
+                      <span className="inline-block rounded-sm bg-muted px-2 py-0.5 text-xs font-medium">
+                        Uploading
+                      </span>
+                    ) : row.stage === "REJECTED" ? (
+                      <span className="inline-block rounded-sm bg-destructive-soft px-2 py-0.5 text-xs font-medium text-destructive">
+                        Not accepted
+                      </span>
+                    ) : (
+                      <CvStatusLabel status={row.stage} />
                     )}
-                </span>
-              </li>
-            ))}
-          </ul>
+                    {row.note && (
+                      <span className="text-sm text-muted-foreground">
+                        {row.note}
+                      </span>
+                    )}
+                    {canUpload &&
+                      row.cvId &&
+                      (row.stage === "FAILED" ||
+                        row.stage === "NEEDS_REVIEW") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => void retry(row.cvId!)}
+                          aria-label={`Run ${row.fileName} again`}
+                        >
+                          Run again
+                        </Button>
+                      )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
         </div>
       )}
     </section>

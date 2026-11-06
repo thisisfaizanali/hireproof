@@ -117,9 +117,9 @@ export function CandidateProfile({ id }: { id: string }) {
     ["Experience", years(c.totalExperienceYears)],
     [
       "Notice period",
-      c.noticeText
-        ? `${notice(c.noticeText, c.noticeDays)}, as written: ${c.noticeText}`
-        : "Not stated",
+      c.noticeDays !== null
+        ? notice(c.noticeText, c.noticeDays)
+        : (c.noticeText ?? "Not stated"),
     ],
     ["Pay", c.ctcText ? c.ctcText : "Not stated"],
     ["Current CTC", lpa(c.currentCtcLpa) ?? "Not stated"],
