@@ -13,7 +13,9 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
     "capture:scorecards": "tsx --env-file-if-exists=../../.env scripts/capture-scorecards.ts",
-    "eval:jd": "tsx --env-file-if-exists=../../.env scripts/eval-jd.ts"
+    "eval:jd": "tsx --env-file-if-exists=../../.env scripts/eval-jd.ts",
+    "capture:cvs": "tsx --env-file-if-exists=../../.env scripts/capture-cvs.ts",
+    "eval:cv": "tsx --env-file-if-exists=../../.env scripts/eval-cv.ts"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

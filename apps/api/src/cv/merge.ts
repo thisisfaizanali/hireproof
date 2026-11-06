@@ -50,6 +50,17 @@ const titleCase = (s: string) =>
     ? s.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (m) => m.toUpperCase())
     : s;
 
+// OCR sometimes leaves a stray one or two letter fragment beside the name.
+const trimNoise = (name: string) =>
+  name
+    .trim()
+    .split(/\s+/)
+    .filter(
+      (w, i, all) =>
+        !(/^[a-z]{1,2}$/.test(w) && (i === 0 || i === all.length - 1)),
+    )
+    .join(" ");
+
 // Fallback when the model is unavailable: a name sits in the first lines.
 // When the email address shares a word with a line, that line wins, which
 // settles layouts where the contact block comes before the name.
@@ -131,7 +142,7 @@ export function mergeProfile(
   let location: string | null = null;
   let aiYears: number | null = null;
   if (ai) {
-    if (ai.name && appearsIn(ai.name, text)) name = ai.name.trim();
+    if (ai.name && appearsIn(ai.name, text)) name = trimNoise(ai.name);
     else if (ai.name) {
       reasons.push("Check the name, the AI value was not found in the CV");
     }
