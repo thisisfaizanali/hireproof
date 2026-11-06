@@ -28,7 +28,7 @@ const norm = (s: string | null | undefined) =>
 
 // "Label : value" on one line, or the label alone with the value after it.
 const LABELS =
-  /^(date of birth|dob|age|gender|sex|marital status|father'?s name|nationality|languages known)\s*[:-]?\s*(.*)$/i;
+  /^(date of birth|dob|age|gender|sex|marital status|father'?s name|nationality|languages known)\s*(?:[:-]\s*|$)(.*)$/i;
 function personalValues(text: string): string[] {
   const lines = text.split("\n").map((l) => l.trim());
   const values: string[] = [];

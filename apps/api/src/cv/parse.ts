@@ -4,6 +4,7 @@ import { CvExtractError, extractCvText } from "./extract";
 import { mergeProfile, type CvProfile } from "./merge";
 import type { ocrPdf } from "./ocr";
 import { redact } from "./redact";
+import { findSkills } from "@hireproof/shared";
 import { rulesProfile } from "./rules";
 
 export type CvStage = "EXTRACTING" | "OCR" | "PARSING";
@@ -28,6 +29,17 @@ export interface ParseDeps {
 }
 
 const MIN_SCAN_WORDS = 40;
+
+// The name, plus the words in the email address, which are almost always the
+// name too. This keeps the name out of the redacted text even when it was not
+// found. Words that are skills ("java.dev@") are left alone.
+function nameTokens(profile: CvProfile) {
+  const fromEmail = (profile.email ?? "")
+    .split("@")[0]
+    .split(/[._+\-\d]+/)
+    .filter((w) => w.length >= 3 && findSkills(w).length === 0);
+  return [profile.name, ...fromEmail].join(" ");
+}
 
 // Everything between "bytes in" and "profile out", with no database access, so
 // the job, the capture script and the accuracy script all run the same code.
@@ -64,7 +76,7 @@ export async function parseCv(
 
   return {
     text,
-    redactedText: redact(text, merged.profile.name),
+    redactedText: redact(text, nameTokens(merged.profile)),
     textSource: extracted.textSource,
     ocrConfidence: extracted.ocrConfidence,
     profile: merged.profile,

@@ -1,5 +1,5 @@
 import type { AiProfile } from "./aiProfile";
-import { joinSpacedHeadings, type RulesProfile } from "./rules";
+import { DEGREE, joinSpacedHeadings, type RulesProfile } from "./rules";
 
 export interface CvProfile {
   name: string;
@@ -51,40 +51,60 @@ const titleCase = (s: string) =>
     : s;
 
 // OCR sometimes leaves a stray one or two letter fragment beside the name.
-const trimNoise = (name: string) =>
-  name
-    .trim()
-    .split(/\s+/)
+const trimNoise = (name: string) => {
+  const words = name.trim().split(/\s+/);
+  return words
     .filter(
-      (w, i, all) =>
-        !(/^[a-z]{1,2}$/.test(w) && (i === 0 || i === all.length - 1)),
+      (w, i) =>
+        !(
+          /^\p{L}{1,2}$/u.test(w) &&
+          (i === 0 || i === words.length - 1) &&
+          (words.length >= 3 || /^[a-z]/.test(w))
+        ),
     )
     .join(" ");
+};
 
-// Fallback when the model is unavailable: a name sits in the first lines.
-// When the email address shares a word with a line, that line wins, which
-// settles layouts where the contact block comes before the name.
+// Fallback when the model is unavailable: a name is a short line of capitalised
+// words near the top. When the email address shares a word with a line, that
+// line wins, which settles layouts where the contact block comes first and the
+// name sits further down.
 export function guessName(text: string, email: string | null): string | null {
   const local = squash((email ?? "").split("@")[0]).replace(/ /g, "");
-  const lines = joinSpacedHeadings(text)
-    .split("\n")
-    .slice(0, 14)
-    .map((l) =>
-      l
-        .replace(EMAIL_RE, " ")
-        .replace(PHONE_RE, " ")
-        .replace(/\|/g, " ")
-        .replace(/\s+/g, " ")
-        .trim(),
-    )
-    .filter((l) => l && !/\d/.test(l) && NAME_LINE.test(titleCase(l)))
-    .filter((l) => !NOT_A_NAME.test(l));
   const share = (line: string) =>
     squash(line)
       .split(" ")
       .filter((w) => w.length >= 3 && local.includes(w)).length;
-  const best = [...lines].sort((a, b) => share(b) - share(a))[0];
-  return best ? titleCase(best) : null;
+
+  const lines = joinSpacedHeadings(text)
+    .split("\n")
+    .slice(0, 40)
+    .map((raw, index) => {
+      const before =
+        raw.search(EMAIL_RE) > 0 ? raw.slice(0, raw.search(EMAIL_RE)) : raw;
+      const line = trimNoise(
+        before
+          .replace(EMAIL_RE, " ")
+          .replace(PHONE_RE, " ")
+          .replace(/[|\u2018\u2019'"`]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim(),
+      );
+      return { line, index };
+    })
+    .filter(
+      ({ line }) =>
+        line &&
+        !/\d/.test(line) &&
+        NAME_LINE.test(titleCase(line)) &&
+        !NOT_A_NAME.test(line),
+    );
+  const best = [...lines].sort(
+    (a, b) => share(b.line) - share(a.line) || a.index - b.index,
+  )[0];
+  // Without an email to confirm it, only the top of the page is trusted.
+  if (!best || (share(best.line) === 0 && best.index > 5)) return null;
+  return titleCase(best.line);
 }
 
 // First line of the role heading, as a rules-only guess: the text before the
@@ -119,6 +139,7 @@ export function guessLocation(text: string): string | null {
 export function findEmployers(text: string): string[] {
   const names = new Set<string>();
   for (const line of text.split("\n")) {
+    if (DEGREE.test(line)) continue;
     if (!/\b(?:19|20)\d{2}\b|\d{1,2}\/\d{4}/.test(line)) continue;
     const parts = line.split(",");
     const name = parts.length >= 3 ? parts[1].trim() : "";

@@ -8,6 +8,7 @@ import {
   parseNotice,
   rulesProfile,
 } from "../src/cv/rules";
+import { guessName } from "../src/cv/merge";
 import { ASOF, textCorpus } from "./cvCorpus";
 
 const today = new Date(Date.UTC(2026, 10, 15));
@@ -177,5 +178,49 @@ describe("the sample corpus", () => {
         expect(years, where).toBeCloseTo(cv.totalExperienceYears, 1);
       }
     }
+  });
+});
+
+describe("guessName", () => {
+  it("reads a name from the top line", () => {
+    expect(
+      guessName(
+        "Ritika Bansal\nritika.bansal@example.com | +91 90000 11001 | Noida",
+        "ritika.bansal@example.com",
+      ),
+    ).toBe("Ritika Bansal");
+  });
+
+  it("drops the city that follows an email on the same line", () => {
+    expect(
+      guessName(
+        "Sridhar Venkataraman sridhar.venkat@example.org | +91 90000 11004 | Bengaluru",
+        "sridhar.venkat@example.org",
+      ),
+    ).toBe("Sridhar Venkataraman");
+  });
+
+  it("finds a name below a contact sidebar by matching the email", () => {
+    const text = [
+      "C O N TA C T",
+      "nikhil.deshmukh@example.com",
+      "Pune",
+      "S K I L L S",
+      "Android SDK",
+      "Nikhil Deshmukh",
+      "Android Developer (Kotlin)",
+    ].join("\n");
+    expect(guessName(text, "nikhil.deshmukh@example.com")).toBe(
+      "Nikhil Deshmukh",
+    );
+  });
+
+  it("makes an upper-case name readable and drops OCR specks", () => {
+    expect(guessName("FARHAN QURESHI\nEmail: x", null)).toBe("Farhan Qureshi");
+    expect(guessName("po Meghna Dutta\nNoida", null)).toBe("Meghna Dutta");
+  });
+
+  it("gives up rather than guess from a heading", () => {
+    expect(guessName("CURRICULUM VITAE\nSKILLS\nJava", null)).toBeNull();
   });
 });

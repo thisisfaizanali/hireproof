@@ -76,7 +76,7 @@
         "currentCtcLpa": null,
         "expectedCtcLpa": null
       },
-      "employers": ["Computer Science and Engineering", "Kerala State Board"],
+      "employers": [],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -112,7 +112,7 @@
         "currentCtcLpa": null,
         "expectedCtcLpa": null
       },
-      "employers": ["Silkroute Bontiqifes", "Chaudhary Charan Sing University"],
+      "employers": ["Silkroute Bontiqifes"],
       "reviewReasons": ["Scanned CV, text may be misread"],
       "parseSource": "AI",
       "run": {
@@ -194,12 +194,7 @@
         "currentCtcLpa": 8.2,
         "expectedCtcLpa": 10
       },
-      "employers": [
-        "Altair Financial Services",
-        "Ironbridge Capital",
-        "Finance",
-        "Jamia Millia Islamia"
-      ],
+      "employers": ["Altair Financial Services", "Ironbridge Capital"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -277,11 +272,7 @@
         "currentCtcLpa": 11.2,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Ardent Technologies",
-        "Pinecrest Infosystems",
-        "Electronics and Communication"
-      ],
+      "employers": ["Ardent Technologies", "Pinecrest Infosystems"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -318,7 +309,7 @@
         "currentCtcLpa": 6.5,
         "expectedCtcLpa": null
       },
-      "employers": ["Halcyon Payments", "Zenfin Services", "Delhi University"],
+      "employers": ["Halcyon Payments", "Zenfin Services"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -354,11 +345,7 @@
         "currentCtcLpa": null,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Helpline Hub",
-        "Callnest BPO",
-        "Chaudhary Charan Singh University"
-      ],
+      "employers": ["Helpline Hub", "Callnest BPO"],
       "reviewReasons": ["No email or phone number was found"],
       "parseSource": "AI",
       "run": {
@@ -401,7 +388,7 @@
         "currentCtcLpa": 22,
         "expectedCtcLpa": null
       },
-      "employers": ["Kaveri Digital", "Saffron Soft", "Computer Science"],
+      "employers": ["Kaveri Digital", "Saffron Soft"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -527,11 +514,7 @@
         "currentCtcLpa": 12,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Evergreen Digital",
-        "Testwise Solutions",
-        "Computer Science"
-      ],
+      "employers": ["Evergreen Digital", "Testwise Solutions"],
       "reviewReasons": [
         "Experience from job dates (5 years) differs from the CV's own figure (3 years)"
       ],
@@ -570,7 +553,7 @@
         "currentCtcLpa": null,
         "expectedCtcLpa": null
       },
-      "employers": ["IHM Pusa"],
+      "employers": [],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -606,11 +589,7 @@
         "currentCtcLpa": 5.4,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Shoppers Row",
-        "Style Junction",
-        "Chaudhary Charan Singh University"
-      ],
+      "employers": ["Shoppers Row", "Style Junction"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -683,7 +662,7 @@
         "currentCtcLpa": null,
         "expectedCtcLpa": null
       },
-      "employers": ["Crestline Infotech", "Mechanical Engineering"],
+      "employers": ["Crestline Infotech"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -726,8 +705,7 @@
       "employers": [
         "Altair Financial Services",
         "Kaveri Capital",
-        "Bharat Mutual Finance",
-        "Savitribai Phule Pune University"
+        "Bharat Mutual Finance"
       ],
       "reviewReasons": [],
       "parseSource": "AI",
@@ -807,11 +785,7 @@
         "currentCtcLpa": null,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Intellisoft Health",
-        "Gaia Softech",
-        "Information Technology"
-      ],
+      "employers": ["Intellisoft Health", "Gaia Softech"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -851,11 +825,7 @@
         "currentCtcLpa": null,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Lakeview Finance",
-        "Vantage Securities",
-        "Delhi University"
-      ],
+      "employers": ["Lakeview Finance", "Vantage Securities"],
       "reviewReasons": [
         "Experience from job dates (1.9 years) differs from the CV's own figure (4 years)"
       ],
@@ -980,7 +950,7 @@
         "currentCtcLpa": 16,
         "expectedCtcLpa": null
       },
-      "employers": ["Information Technology"],
+      "employers": [],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1058,7 +1028,7 @@
         "currentCtcLpa": 9.6,
         "expectedCtcLpa": null
       },
-      "employers": ["Lumen Bytes", "Tarang Software", "Information Technology"],
+      "employers": ["Lumen Bytes", "Tarang Software"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1101,9 +1071,7 @@
       "employers": [
         "Orchard Superstores",
         "Fabrica Retail",
-        "Bazaarline Stores",
-        "Institute of Management Studies",
-        "Delhi University"
+        "Bazaarline Stores"
       ],
       "reviewReasons": [],
       "parseSource": "AI",
@@ -1147,12 +1115,7 @@
         "currentCtcLpa": 34,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Helix Payments",
-        "Corvus Software",
-        "Maple Infotech",
-        "Computer Science"
-      ],
+      "employers": ["Helix Payments", "Corvus Software", "Maple Infotech"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1193,12 +1156,7 @@
         "currentCtcLpa": null,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Quickbyte Solutions",
-        "Zephyr Infotech",
-        "University of Lucknow",
-        "IGNOU"
-      ],
+      "employers": ["Quickbyte Solutions", "Zephyr Infotech"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1238,12 +1196,7 @@
         "currentCtcLpa": 5.1,
         "expectedCtcLpa": 7
       },
-      "employers": [
-        "Deccan Urban Bank",
-        "Meridian Cooperative Bank",
-        "Fergusson College",
-        "IIBF"
-      ],
+      "employers": ["Deccan Urban Bank", "Meridian Cooperative Bank", "IIBF"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1289,11 +1242,7 @@
         "currentCtcLpa": 21,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Bluestone Software",
-        "Infoarc Technologies",
-        "Computer Science"
-      ],
+      "employers": ["Bluestone Software", "Infoarc Technologies"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1342,11 +1291,7 @@
         "currentCtcLpa": 18,
         "expectedCtcLpa": 24
       },
-      "employers": [
-        "Cobalt Digital",
-        "Brightpath Solutions",
-        "Computer Science"
-      ],
+      "employers": ["Cobalt Digital", "Brightpath Solutions"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1394,11 +1339,7 @@
         "currentCtcLpa": 18,
         "expectedCtcLpa": 24
       },
-      "employers": [
-        "Cobalt Digital",
-        "Brightpath Solutions",
-        "Computer Science"
-      ],
+      "employers": ["Cobalt Digital", "Brightpath Solutions"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1435,7 +1376,7 @@
         "currentCtcLpa": 6.5,
         "expectedCtcLpa": 8
       },
-      "employers": ["Halcyon Payments", "Zenfin Services", "Delhi University"],
+      "employers": ["Halcyon Payments", "Zenfin Services"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1479,8 +1420,7 @@
       "employers": [
         "Cityfresh Lifestyle",
         "Urbanwear Retail",
-        "Trendline Fashions",
-        "Retailers Association skill programme"
+        "Trendline Fashions"
       ],
       "reviewReasons": [],
       "parseSource": "AI",
@@ -1522,11 +1462,7 @@
         "currentCtcLpa": 24,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Mosaic Software",
-        "Dhruv Technologies",
-        "Computer Science"
-      ],
+      "employers": ["Mosaic Software", "Dhruv Technologies"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1566,11 +1502,7 @@
         "currentCtcLpa": 6.4,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Prism Capital",
-        "Rivercrest Finance",
-        "Savitribai Phule Pune University"
-      ],
+      "employers": ["Prism Capital", "Rivercrest Finance"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1611,7 +1543,7 @@
         "currentCtcLpa": 10.5,
         "expectedCtcLpa": null
       },
-      "employers": ["Computer Science"],
+      "employers": [],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1642,10 +1574,7 @@
         "currentCtcLpa": 6,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Paywave Fintech",
-        "Symbiosis College of Arts and Commerce"
-      ],
+      "employers": ["Paywave Fintech"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1704,8 +1633,7 @@
         "Nimbus Works",
         "Vertex Commerce",
         "Zenith Cloudworks",
-        "Orbit Logic",
-        "Software Engineering"
+        "Orbit Logic"
       ],
       "reviewReasons": [],
       "parseSource": "AI",
@@ -1748,7 +1676,7 @@
         "currentCtcLpa": 20,
         "expectedCtcLpa": 26
       },
-      "employers": ["Computer Science"],
+      "employers": [],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1791,11 +1719,7 @@
         "currentCtcLpa": 19,
         "expectedCtcLpa": 25
       },
-      "employers": [
-        "Quillstone Labs",
-        "Skylark Systems",
-        "Computer Engineering"
-      ],
+      "employers": ["Quillstone Labs", "Skylark Systems"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1837,11 +1761,7 @@
         "currentCtcLpa": null,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Quillstone Labs",
-        "Skylark Systems",
-        "Computer Engineering"
-      ],
+      "employers": ["Quillstone Labs", "Skylark Systems"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1879,7 +1799,7 @@
         "currentCtcLpa": 22,
         "expectedCtcLpa": null
       },
-      "employers": ["Basketry Online", "KartLine Commerce", "Operations"],
+      "employers": ["Basketry Online", "KartLine Commerce"],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1910,7 +1830,7 @@
         "currentCtcLpa": null,
         "expectedCtcLpa": null
       },
-      "employers": ["Modern College of Arts", "Maharashtra Board"],
+      "employers": [],
       "reviewReasons": [],
       "parseSource": "AI",
       "run": {
@@ -1948,11 +1868,7 @@
         "currentCtcLpa": 9.2,
         "expectedCtcLpa": null
       },
-      "employers": [
-        "Precisia Engineering",
-        "Torque Dynamics",
-        "Mechanical Engineering"
-      ],
+      "employers": ["Precisia Engineering", "Torque Dynamics"],
       "reviewReasons": [
         "Experience from job dates (5 years) differs from the CV's own figure (2.5 years)"
       ],

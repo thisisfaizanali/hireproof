@@ -204,7 +204,7 @@ function toMonthIndex(token: string): number | null {
 const HEADING = /^[A-Z][A-Z &/,'-]{3,50}/;
 const EDUCATION_HEADING =
   /^(?:EDUCATION|EDUCATIONAL QUALIFICATIONS?|ACADEMICS?|ACADEMIC QUALIFICATIONS?|QUALIFICATIONS?|CERTIFICATIONS?|COURSES?|TRAINING)\b/;
-const DEGREE =
+export const DEGREE =
   /\b(?:b\.?\s?tech|m\.?\s?tech|b\.?e\.?|m\.?e\.?|b\.?sc|m\.?sc|b\.?com|m\.?com|bba|mba|bca|mca|diploma|ph\.?d|class\s+x{1,2}i{0,2}|ssc|hsc|cgpa|university|college|institute|school)\b/i;
 
 // Years of work from dated ranges: each calendar month counts once, so
