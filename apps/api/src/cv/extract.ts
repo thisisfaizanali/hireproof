@@ -1,7 +1,8 @@
 import { ExtractError, extractText } from "../extract";
 import { LOW_OCR_CONFIDENCE, needsOcr, ocrPdf } from "./ocr";
 
-export type CvFailureCode = "unsupported" | "corrupt" | "encrypted" | "empty";
+export type CvFailureCode =
+  "unsupported" | "corrupt" | "encrypted" | "empty" | "unreadableScan";
 
 export class CvExtractError extends Error {
   constructor(readonly code: CvFailureCode) {
@@ -14,6 +15,7 @@ export const FAILURE_REASONS: Record<CvFailureCode, string> = {
   corrupt: "This file is damaged and cannot be opened.",
   encrypted: "This PDF is password protected.",
   empty: "No text could be read from this file.",
+  unreadableScan: "No readable CV content was found in this scan.",
 };
 
 export interface CvText {
@@ -28,8 +30,9 @@ const ocrReason = "Scanned CV, text may be misread";
 export async function extractCvText(
   buffer: Buffer,
   fileName: string,
-  ocr: typeof ocrPdf = ocrPdf,
+  hooks: { ocr?: typeof ocrPdf; onOcr?: () => Promise<void> | void } = {},
 ): Promise<CvText> {
+  const ocr = hooks.ocr ?? ocrPdf;
   let layer: { text: string; pages: number | null } | null = null;
   try {
     layer = await extractText(buffer, fileName);
@@ -57,6 +60,7 @@ export async function extractCvText(
   }
 
   let scanned: { text: string; confidence: number };
+  await hooks.onOcr?.();
   try {
     scanned = await ocr(buffer);
   } catch {
