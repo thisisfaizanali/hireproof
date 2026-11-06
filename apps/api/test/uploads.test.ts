@@ -8,6 +8,7 @@ import type {
 } from "@hireproof/shared";
 import { app } from "../src/app";
 import { prisma } from "../src/db";
+import { setScoreSender } from "../src/score/trigger";
 import { sample } from "./samples";
 import { addCv, createRequisition, deps, okReply, run } from "./cvHelpers";
 import { loginAs, resetDb } from "./helpers";
@@ -586,6 +587,21 @@ describe("resolving a duplicate", () => {
     );
     expect(again.status).toBe(409);
     expect(await prisma.candidate.count()).toBe(2);
+  });
+
+  it("scores the merged candidate again when the pair is the same person", async () => {
+    const { link } = await pair();
+    const queued: { applicationId: string; force?: boolean }[] = [];
+    setScoreSender(async (job) => void queued.push(job));
+    try {
+      await postJson(recruiter.cookie, `/api/duplicates/${link.id}/resolve`, {
+        samePerson: true,
+      });
+    } finally {
+      setScoreSender(undefined);
+    }
+    const app = await prisma.application.findFirstOrThrow();
+    expect(queued).toEqual([{ applicationId: app.id, force: true }]);
   });
 
   it("answers a double click with one success and one conflict", async () => {
