@@ -44,6 +44,7 @@ model User {
   confirmedScorecards Scorecard[]
   uploadBatches       UploadBatch[]
   resolvedDuplicates  DuplicateLink[]
+  decidedApplications Application[]
 }
 
 model Session {
@@ -302,15 +303,43 @@ model CvDocument {
   @@index([requisitionId])
 }
 
+enum RejectReason {
+  SKILLS_GAP
+  EXPERIENCE
+  NOTICE_PERIOD
+  CTC
+  LOCATION
+  OTHER
+}
+
+enum ScoreBand {
+  STRONG
+  POSSIBLE
+  WEAK
+}
+
+enum ScoreSource {
+  AI
+  RULES
+}
+
 model Application {
-  id            String           @id @default(cuid())
-  candidateId   String
-  candidate     Candidate        @relation(fields: [candidateId], references: [id])
-  requisitionId String
-  requisition   Requisition      @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
-  stage         ApplicationStage @default(SOURCED)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id               String           @id @default(cuid())
+  candidateId      String
+  candidate        Candidate        @relation(fields: [candidateId], references: [id])
+  requisitionId    String
+  requisition      Requisition      @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  stage            ApplicationStage @default(SOURCED)
+  rejectReason     RejectReason?
+  rejectNote       String?
+  decidedById      String?
+  decidedBy        User?            @relation(fields: [decidedById], references: [id])
+  decidedAt        DateTime?
+  // Set while a score job runs, so the list can say "Scoring".
+  scoringStartedAt DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  scores           CandidateScore[]
 
   @@unique([candidateId, requisitionId])
   @@index([requisitionId, createdAt])
@@ -334,4 +363,25 @@ model DuplicateLink {
   @@index([status])
   @@index([cvId])
   @@index([candidateId])
+}
+
+model CandidateScore {
+  id               String      @id @default(cuid())
+  applicationId    String
+  application      Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  scorecardVersion Int
+  total            Int
+  band             ScoreBand
+  mustHavesMet     Int
+  mustHavesTotal   Int
+  experiencePoints Int
+  criteria         Json
+  flags            String[]
+  source           ScoreSource
+  model            String?
+  stale            Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+
+  @@unique([applicationId, scorecardVersion])
+  @@index([applicationId])
 }
