@@ -53,6 +53,7 @@ const editorBody = (req: RequisitionDetail, confirm = false) => ({
     id,
     kind,
     label,
+    reviewed: confirm,
   })),
   experience: {
     minYears: req.scorecard!.experience.minYears,
@@ -61,6 +62,9 @@ const editorBody = (req: RequisitionDetail, confirm = false) => ({
   notice: { maxDays: req.scorecard!.notice.maxDays },
   ctc: { maxLpa: req.scorecard!.ctc.maxLpa },
   locations: req.scorecard!.locations.values,
+  reviewed: confirm
+    ? { experience: true, notice: true, ctc: true, locations: true }
+    : undefined,
   confirm,
 });
 
@@ -401,6 +405,57 @@ describe("scorecard review", () => {
     const forced = await extract({ force: true });
     expect(forced.status).toBe(200);
     expect(forced.body.scorecard.status).toBe("DRAFT");
+  });
+});
+
+describe("review before confirming", () => {
+  it("refuses to confirm while items are still flagged", async () => {
+    const { cookie, client } = await setup();
+    const req = await create(cookie, client.id);
+    const body = {
+      ...editorBody(req),
+      criteria: req.scorecard!.criteria.map(({ id, label }) => ({
+        id,
+        kind: "MUST_HAVE",
+        label,
+      })),
+      confirm: true,
+    };
+    const res = await put(cookie, req.id, body);
+    expect(res.status).toBe(422);
+    expect(res.body.pending).toEqual(
+      expect.arrayContaining(["Experience", "Notice period", "CTC budget"]),
+    );
+    expect(
+      await prisma.scorecard.count({ where: { status: "CONFIRMED" } }),
+    ).toBe(0);
+  });
+
+  it("clears a flag when it is marked reviewed without editing", async () => {
+    const { cookie, client } = await setup();
+    const req = await create(cookie, client.id);
+    const java = req.scorecard!.criteria.find((c) => c.label === "Java")!;
+    expect(java.needsReview).toBe(true);
+
+    const res = await put(cookie, req.id, {
+      ...editorBody(req),
+      criteria: req.scorecard!.criteria.map(({ id, kind, label }) => ({
+        id,
+        kind,
+        label,
+        reviewed: id === java.id,
+      })),
+      reviewed: { notice: true },
+    });
+    const card = res.body.scorecard;
+    expect(
+      card.criteria.find((c: { id: string }) => c.id === java.id),
+    ).toMatchObject({
+      needsReview: false,
+      sourceQuote: expect.any(String),
+    });
+    expect(card.notice.needsReview).toBe(false);
+    expect(card.experience.needsReview).toBe(true);
   });
 });
 

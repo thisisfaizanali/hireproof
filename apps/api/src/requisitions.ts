@@ -385,9 +385,10 @@ const carry = (
   prev: { quote: string | null; review: boolean },
   changed: boolean,
   hasValue: boolean,
+  reviewed = false,
 ) => ({
   quote: hasValue ? prev.quote : null,
-  review: hasValue && prev.review && !changed,
+  review: hasValue && prev.review && !changed && !reviewed,
 });
 
 requisitions.put(
@@ -413,7 +414,7 @@ requisitions.put(
         label: c.label,
         position,
         sourceQuote: prev?.sourceQuote ?? null,
-        needsReview: Boolean(prev?.needsReview) && !edited,
+        needsReview: Boolean(prev?.needsReview) && !edited && !c.reviewed,
       };
     });
 
@@ -428,24 +429,41 @@ requisitions.put(
       minYears !== old.experienceMinYears ||
         maxYears !== old.experienceMaxYears,
       minYears !== null || maxYears !== null,
+      body.reviewed?.experience,
     );
     const notice = carry(
       { quote: old.noticeQuote, review: old.noticeReview },
       body.notice.maxDays !== old.noticeMaxDays,
       body.notice.maxDays !== null,
+      body.reviewed?.notice,
     );
     const ctc = carry(
       { quote: old.ctcQuote, review: old.ctcReview },
       body.ctc.maxLpa !== old.ctcMaxLpa,
       body.ctc.maxLpa !== null,
+      body.reviewed?.ctc,
     );
     const where = carry(
       { quote: old.locationsQuote, review: old.locationsReview },
       !sameLocations,
       places.length > 0,
+      body.reviewed?.locations,
     );
 
     const confirm = body.confirm === true;
+    const pending = [
+      ...criteria.filter((c) => c.needsReview).map((c) => c.label),
+      ...(experience.review ? ["Experience"] : []),
+      ...(notice.review ? ["Notice period"] : []),
+      ...(ctc.review ? ["CTC budget"] : []),
+      ...(where.review ? ["Locations"] : []),
+    ];
+    if (confirm && pending.length > 0) {
+      return res.status(422).json({
+        error: `${pending.length} ${pending.length === 1 ? "item still needs" : "items still need"} review before confirming.`,
+        pending,
+      });
+    }
     const becomesOpen = confirm && row.status === "DRAFT";
 
     await prisma.$transaction([

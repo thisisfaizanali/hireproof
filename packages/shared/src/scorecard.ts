@@ -134,6 +134,7 @@ export const ScorecardInput = z
           id: z.string().optional(),
           kind: CriterionKind,
           label,
+          reviewed: z.boolean().optional(),
         }),
       )
       .max(LIMITS.criteria, "Too many requirements"),
@@ -156,6 +157,15 @@ export const ScorecardInput = z
     locations: z
       .array(z.string().trim().min(1).max(60))
       .max(LIMITS.locations, "Too many locations"),
+    reviewed: z
+      .object({
+        experience: z.boolean(),
+        notice: z.boolean(),
+        ctc: z.boolean(),
+        locations: z.boolean(),
+      })
+      .partial()
+      .optional(),
     confirm: z.boolean().optional(),
   })
   .superRefine((value, ctx) => {
