@@ -72,9 +72,7 @@
           "needsReview": false
         },
         "locations": {
-          "values": [
-            "Noida"
-          ],
+          "values": ["Noida"],
           "sourceQuote": "Location: Noida (hybrid, three days in office)",
           "needsReview": false
         },
@@ -146,10 +144,7 @@
           "needsReview": false
         },
         "locations": {
-          "values": [
-            "Pune",
-            "Noida"
-          ],
+          "values": ["Pune", "Noida"],
           "sourceQuote": "Location: Pune or Noida",
           "needsReview": false
         },
@@ -229,11 +224,7 @@
           "needsReview": false
         },
         "locations": {
-          "values": [
-            "Gurugram",
-            "Noida",
-            "Delhi"
-          ],
+          "values": ["Gurugram", "Noida", "Delhi"],
           "sourceQuote": "Gurugram preferred but Noida and Delhi are also fine",
           "needsReview": false
         },
@@ -299,9 +290,7 @@
           "needsReview": false
         },
         "locations": {
-          "values": [
-            "Noida"
-          ],
+          "values": ["Noida"],
           "sourceQuote": "Kestrel Infotech, Noida",
           "needsReview": false
         },
