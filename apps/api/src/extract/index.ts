@@ -30,7 +30,7 @@ function sniff(buffer: Buffer): Kind | null {
 
 const tidy = (text: string) =>
   text
-    .replace(/^﻿/, "")
+    .replace(/^\uFEFF/, "")
     .replace(/\r\n?/g, "\n")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
