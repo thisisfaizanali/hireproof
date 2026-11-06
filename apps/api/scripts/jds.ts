@@ -28,3 +28,6 @@ export async function readJd(file: string) {
 
 export const jdFiles = () =>
   readdirSync(resolve(SAMPLES, "jds")).map((f) => `jds/${f}`);
+
+// The free tier allows a few calls a minute, so scripts leave a gap between them.
+export const pause = (ms = 20_000) => new Promise((r) => setTimeout(r, ms));

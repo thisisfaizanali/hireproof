@@ -74,7 +74,7 @@ export async function chat(messages: Message[]): Promise<ChatResult> {
       model: config.model,
       messages,
       temperature: 0,
-      max_completion_tokens: 2000,
+      max_completion_tokens: 4000,
       response_format: structured
         ? {
             type: "json_schema",

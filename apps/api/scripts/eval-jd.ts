@@ -1,9 +1,13 @@
-import { canonicalSkill } from "@hireproof/shared";
+import { findSkills } from "@hireproof/shared";
 import { extractScorecard } from "../src/ai/extract";
 import { aiConfig } from "../src/ai/llm";
-import { readJd, truth } from "./jds";
+import { pause, readJd, truth } from "./jds";
 
-const skill = (label: string) => (canonicalSkill(label) ?? label).toLowerCase();
+// A label counts as every dictionary skill it mentions, or as itself if none.
+const skills = (label: string) => {
+  const found = findSkills(label).map((s) => s.name.toLowerCase());
+  return found.length ? found : [label.toLowerCase()];
+};
 const same = (a: unknown, b: unknown) =>
   JSON.stringify(a) === JSON.stringify(b);
 const mark = (got: unknown, want: unknown) =>
@@ -19,13 +23,13 @@ async function main() {
   const rows: Record<string, string>[] = [];
   for (const jd of truth) {
     const { scorecard: s, run } = await extractScorecard(await readJd(jd.file));
-    const want = new Set(jd.mustHaveSkills.map(skill));
+    const want = new Set(jd.mustHaveSkills.flatMap(skills));
     const must = new Set(
       s.criteria
         .filter((c) => c.kind === "MUST_HAVE")
-        .map((c) => skill(c.label)),
+        .flatMap((c) => skills(c.label)),
     );
-    const any = new Set(s.criteria.map((c) => skill(c.label)));
+    const any = new Set(s.criteria.flatMap((c) => skills(c.label)));
     const hits = [...must].filter((m) => want.has(m)).length;
     const anyHits = [...want].filter((w) => any.has(w)).length;
     rows.push({
@@ -42,7 +46,9 @@ async function main() {
       "must recall": pct(want.size ? hits / want.size : 1),
       "must precision": must.size ? pct(hits / must.size) : "n/a",
       "recall, any kind": pct(want.size ? anyHits / want.size : 1),
+      tokens: `${run.inputTokens ?? "-"} in, ${run.outputTokens ?? "-"} out, ${run.latencyMs} ms`,
     });
+    if (aiConfig() && jd !== truth.at(-1)) await pause();
   }
   console.table(rows);
 }

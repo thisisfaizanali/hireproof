@@ -50,7 +50,7 @@ Rules:
 - Extract only what the text states. Never guess, infer or fill in typical values.
 - When something is missing, vague or contradictory, use null (an empty list for locations) and add one plain sentence to "ambiguities" saying what is unclear, for example "CTC is given as 'as per market' with no number." Write at most 6 ambiguity sentences.
 - Every criterion, and every constraint that has a value, needs "sourceQuote": a short passage copied exactly, character for character, from the job description. Do not paraphrase or correct it. If you cannot quote it, leave the value out.
-- criteria are requirements: skills, tools, domains, or short phrases such as "3+ years as store manager". One requirement per criterion, with a short label a recruiter would write.
+- criteria are requirements: skills, tools, domains, or short phrases such as "3+ years as store manager". One requirement per criterion. The label is the skill or requirement name only, as short as possible (for example "Excel", not "Excel proficiency with pivot tables"); the quote carries the detail.
 - kind is MUST_HAVE only when the text itself marks the requirement as needed, for example required, must, mandatory or essential. kind is NICE_TO_HAVE when the text says good to have, plus, preferred or an added advantage. When the text does not make it clear, use NICE_TO_HAVE and add an ambiguity sentence.
 - experience: minimum and maximum years of experience as written. With a single number, set minYears and leave maxYears null.
 - notice: the longest notice period the employer accepts, in days. Count a month as 30 days. Immediate joining is 0.
