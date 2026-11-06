@@ -1,3 +1,4 @@
+import { parse } from "node:path";
 import {
   Router,
   type RequestHandler,
@@ -145,6 +146,19 @@ export const criteriaRows = (e: SeedExtraction) =>
     needsReview: c.needsReview,
     position,
   }));
+
+const NOT_A_TITLE = /^(hi|hello|dear)\b|^(from|to|subject|sent):/i;
+
+// Used when the person typed no title and the AI gave none.
+export function deriveTitle(jdText: string, fileName: string | null) {
+  const line = jdText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .find((l) => l && !NOT_A_TITLE.test(l));
+  if (line && line.length < 80) return line;
+  const base = fileName && parse(fileName).name.trim();
+  return base || "Untitled requisition";
+}
 
 const aiRunRow = (e: Extraction, requisitionId: string) => ({
   kind: "JD_EXTRACT",
@@ -301,7 +315,10 @@ requisitions.post(
         data: {
           clientId,
           ownerId: req.user!.id,
-          title: title || extraction.scorecard.title || "Untitled requisition",
+          title:
+            title ||
+            extraction.scorecard.title ||
+            deriveTitle(jdText, file?.originalname ?? null),
           jdText,
           jdFileName: file?.originalname ?? null,
           scorecard: {

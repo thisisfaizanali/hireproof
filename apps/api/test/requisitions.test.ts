@@ -1,3 +1,4 @@
+import { EOL } from "node:os";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RequisitionDetail } from "@hireproof/shared";
@@ -123,6 +124,49 @@ describe("creating a requisition", () => {
       title: "Java lead",
       extraction: { outcome: "NOT_CONFIGURED" },
       scorecard: { source: "RULES" },
+    });
+  });
+
+  describe("title when none is typed and the AI gives none", () => {
+    const titleOf = async (jd: string, fileName?: string) => {
+      const { cookie, client } = await setup();
+      const req = post(cookie).field("clientId", client.id);
+      const res = fileName
+        ? await req.attach("jdFile", Buffer.from(jd), fileName)
+        : await req.field("jdText", jd);
+      expect(res.status).toBe(201);
+      return res.body.title;
+    };
+    const body = "Must have Java and Spring Boot. Notice up to 60 days.";
+
+    it("uses a short first line", async () => {
+      expect(await titleOf(JD)).toBe("Senior Java Developer");
+    });
+
+    it("skips greetings and email headers", async () => {
+      const jd = [
+        "From: HR <hr@example.com>",
+        "to: Hiring Desk",
+        "Subject: FW: urgent",
+        "",
+        "Hi team,",
+        "Dear all",
+        "Store Operations Manager",
+        body,
+      ].join(EOL);
+      expect(await titleOf(jd)).toBe("Store Operations Manager");
+    });
+
+    it("falls back to the file name when the first line is long", async () => {
+      const long = "We urgently need someone to run two stores. " + body;
+      expect(await titleOf(long, "Store ops JD.v2.txt")).toBe(
+        "Store ops JD.v2",
+      );
+    });
+
+    it("falls back to Untitled for pasted text with a long first line", async () => {
+      const long = "We urgently need someone to run two stores. " + body;
+      expect(await titleOf(long)).toBe("Untitled requisition");
     });
   });
 
