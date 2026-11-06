@@ -141,14 +141,14 @@ export const jds: Jd[] = [
       niceToHave: ["Visual merchandising", "POS systems"],
       experienceMinYears: 6,
       experienceMaxYears: 10,
-      locations: ["NCR"],
+      locations: ["Gurugram", "Noida", "Delhi"],
       noticeMaxDays: null,
       ctcBudgetLpa: null,
     },
     ambiguity: [
       "CTC is given as 'as per market' with no number.",
       "Notice period is not mentioned.",
-      "Location is 'NCR' with Gurugram preferred, not a fixed city.",
+      "Location is 'NCR' with Gurugram preferred, and Noida and Delhi also fine.",
     ],
     text: `From: Neelam Oberoi <neelam.oberoi@marigoldretail.example.com>
 To: Hiring Desk
@@ -178,8 +178,8 @@ HR, Marigold Retail
     client: "Kestrel Infotech",
     title: "Java Developer",
     scorecard: {
-      mustHave: ["Java", "Hibernate", "REST APIs"],
-      niceToHave: [],
+      mustHave: [],
+      niceToHave: ["Java", "Hibernate", "REST APIs"],
       experienceMinYears: 3,
       experienceMaxYears: 5,
       locations: ["Noida"],
@@ -189,7 +189,7 @@ HR, Marigold Retail
     ambiguity: [
       "Notice period is not mentioned.",
       "CTC budget is not mentioned.",
-      "No nice-to-have skills are listed.",
+      "Skills are listed without saying which are required.",
     ],
     blocks: [
       { h: "Java Developer" },

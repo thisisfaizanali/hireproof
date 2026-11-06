@@ -88,3 +88,6 @@ export const DEMO_USERS: {
     client: "Sahyadri Finserv",
   },
 ];
+
+export * from "./scorecard";
+export * from "./skills";

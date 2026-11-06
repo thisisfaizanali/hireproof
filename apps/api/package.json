@@ -11,12 +11,15 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "capture:scorecards": "tsx --env-file-if-exists=../../.env scripts/capture-scorecards.ts",
+    "eval:jd": "tsx --env-file-if-exists=../../.env scripts/eval-jd.ts"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
     "@types/node": "^24.19.2",
     "@types/supertest": "^7.2.1",
     "prisma": "^7.10.1",
@@ -33,6 +36,10 @@
     "express": "^5.3.0",
     "express-rate-limit": "^8.7.3",
     "helmet": "^8.3.0",
+    "mammoth": "^1.13.0",
+    "multer": "^2.5.0",
+    "openai": "^7.51.0",
+    "unpdf": "^2.1.0",
     "zod": "^4.6.7"
   }
 }

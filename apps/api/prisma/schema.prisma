@@ -21,24 +21,27 @@ enum Role {
 }
 
 model Client {
-  id        String   @id @default(cuid())
-  name      String
-  industry  Industry
-  createdAt DateTime @default(now())
-  users     User[]
+  id           String        @id @default(cuid())
+  name         String
+  industry     Industry
+  createdAt    DateTime      @default(now())
+  users        User[]
+  requisitions Requisition[]
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  name         String
-  passwordHash String
-  role         Role
-  clientId     String?
-  client       Client?      @relation(fields: [clientId], references: [id])
-  createdAt    DateTime     @default(now())
-  sessions     Session[]
-  auditEvents  AuditEvent[]
+  id                  String        @id @default(cuid())
+  email               String        @unique
+  name                String
+  passwordHash        String
+  role                Role
+  clientId            String?
+  client              Client?       @relation(fields: [clientId], references: [id])
+  createdAt           DateTime      @default(now())
+  sessions            Session[]
+  auditEvents         AuditEvent[]
+  requisitions        Requisition[]
+  confirmedScorecards Scorecard[]
 }
 
 model Session {
@@ -63,4 +66,114 @@ model AuditEvent {
 
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+enum RequisitionStatus {
+  DRAFT
+  OPEN
+  ON_HOLD
+  CLOSED
+}
+
+enum ScorecardSource {
+  AI
+  RULES
+  MANUAL
+}
+
+enum ScorecardStatus {
+  DRAFT
+  CONFIRMED
+}
+
+enum CriterionKind {
+  MUST_HAVE
+  NICE_TO_HAVE
+}
+
+enum AiOutcome {
+  OK
+  RETRIED_OK
+  INVALID_OUTPUT
+  PROVIDER_ERROR
+  NOT_CONFIGURED
+}
+
+model Requisition {
+  id         String            @id @default(cuid())
+  number     Int               @unique @default(autoincrement())
+  clientId   String
+  client     Client            @relation(fields: [clientId], references: [id])
+  ownerId    String
+  owner      User              @relation(fields: [ownerId], references: [id])
+  title      String
+  jdText     String
+  jdFileName String?
+  status     RequisitionStatus @default(DRAFT)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  scorecard  Scorecard?
+  aiRuns     AiRun[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model Scorecard {
+  id            String      @id @default(cuid())
+  requisitionId String      @unique
+  requisition   Requisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+
+  experienceMinYears Float?
+  experienceMaxYears Float?
+  experienceQuote    String?
+  experienceReview   Boolean  @default(false)
+  noticeMaxDays      Int?
+  noticeQuote        String?
+  noticeReview       Boolean  @default(false)
+  ctcMaxLpa          Float?
+  ctcQuote           String?
+  ctcReview          Boolean  @default(false)
+  locations          String[]
+  locationsQuote     String?
+  locationsReview    Boolean  @default(false)
+
+  ambiguities   String[]
+  source        ScorecardSource
+  model         String?
+  status        ScorecardStatus @default(DRAFT)
+  version       Int             @default(0)
+  confirmedAt   DateTime?
+  confirmedById String?
+  confirmedBy   User?           @relation(fields: [confirmedById], references: [id])
+  criteria      Criterion[]
+}
+
+model Criterion {
+  id          String        @id @default(cuid())
+  scorecardId String
+  scorecard   Scorecard     @relation(fields: [scorecardId], references: [id], onDelete: Cascade)
+  kind        CriterionKind
+  label       String
+  sourceQuote String?
+  needsReview Boolean       @default(false)
+  position    Int
+
+  @@index([scorecardId])
+}
+
+model AiRun {
+  id            String       @id @default(cuid())
+  kind          String
+  requisitionId String?
+  requisition   Requisition? @relation(fields: [requisitionId], references: [id], onDelete: SetNull)
+  model         String
+  outcome       AiOutcome
+  latencyMs     Int
+  inputTokens   Int?
+  outputTokens  Int?
+  errorMessage  String?
+  createdAt     DateTime     @default(now())
+
+  @@index([requisitionId])
 }
