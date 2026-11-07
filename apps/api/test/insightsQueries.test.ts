@@ -5,7 +5,7 @@ import { parseIst } from "@hireproof/shared";
 const log = vi.hoisted(() => ({ statements: 0 }));
 vi.mock("../src/db", async () => {
   const { PrismaPg } = await import("@prisma/adapter-pg");
-  const { PrismaClient } = await import("../src/generated/prisma/client");
+  const { PrismaClient } = await import("../src/generated/prisma/client.js");
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
     log: [{ emit: "event", level: "query" }],
