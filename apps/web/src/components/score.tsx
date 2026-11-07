@@ -11,7 +11,8 @@ import {
   type ScoreState,
 } from "@hireproof/shared";
 
-const base = "inline-block rounded-sm px-2 py-0.5 text-xs font-medium";
+const base =
+  "inline-block rounded-sm px-2 py-0.5 text-xs font-medium whitespace-nowrap";
 
 export const STAGE_LABEL: Record<string, string> = {
   SOURCED: "Sourced",

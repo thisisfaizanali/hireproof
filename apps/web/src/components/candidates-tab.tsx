@@ -560,7 +560,7 @@ function ScoreCell({
         type="button"
         aria-expanded={open}
         onClick={onToggle}
-        className="rounded-sm text-sm underline underline-offset-4 hover:no-underline"
+        className="rounded-sm text-sm whitespace-nowrap underline underline-offset-4 hover:no-underline"
       >
         {open ? "Hide why" : "Why this score"}
       </button>
