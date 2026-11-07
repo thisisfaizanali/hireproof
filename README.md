@@ -78,7 +78,7 @@ The seed creates four requisitions from the sample JDs, using the saved fixture 
 
 ## CV upload and parsing
 
-A recruiter opens a requisition, chooses its Candidates tab and drops PDF or DOCX files in. The browser checks type and size first, then sends the files ten at a time. Everything the server accepts is queued and shows live status: Queued, Reading, Scanning (OCR), Parsing, then Done, Needs review, Failed or Duplicate file. The page can be left; the batch keeps going and shows again on return.
+A recruiter opens a requisition, chooses its Candidates tab, records where the CVs came from (see Insights, consent and data rights) and drops PDF or DOCX files in. The browser checks type and size first, then sends the files ten at a time. Everything the server accepts is queued and shows live status: Queued, Reading, Scanning (OCR), Parsing, then Done, Needs review, Failed or Duplicate file. The page can be left; the batch keeps going and shows again on return.
 
 | Limit | Value                                |
 | ----- | ------------------------------------ |
@@ -149,6 +149,26 @@ A recruiter submits a screened candidate with a note of 20 to 600 characters on 
 **Recruiter side.** Pending proposals show under the candidate in the requisition list. Confirm books one time (stage Interview, the other times declined) and records a message to the candidate; "None of these work" declines all of them and records a message to the client. Messaging is mocked: an `OutboundMessage` row holds the subject and body with status MOCKED, and the page says the message was recorded, not sent. After the interview a recruiter moves a candidate to offered or not selected, then to joined or offer fell through. Each move is audited (`STAGE_CHANGED` with the stages), as are submission, withdrawal, the client views and answers, and the slots.
 
 The seed leaves a believable week: Kestrel has five submissions (two awaiting the client, one shortlisted, one rejected for notice period, one with two proposed times waiting on the recruiter) and Sahyadri has three (one at interview with a confirmed time, one offered, one to review).
+
+## Insights, consent and data rights
+
+These are for the delivery head. A recruiter or a hiring manager gets 403 from every route below and is sent back to their own home by the pages.
+
+**Weekly AI against recruiter view** (`GET /api/insights/week?start=YYYY-MM-DD`). A week runs Monday 00:00 to Sunday 23:59 IST and is named by its Monday. Each recruiter and client decision is audited with the AI band, total and score source at that moment (`APPLICATION_SCREENED`, `APPLICATION_REJECTED`, `APPLICATION_SUBMITTED`, `CLIENT_SHORTLISTED`, `CLIENT_REJECTED`), so the page sets the band at the time of the decision beside what was done, not the band the candidate has today.
+
+- **Agreement.** The table counts decisions by band and decision. The recruiter and the AI agree when a Strong or Possible match is screened or a Weak match is turned down. The rate is agreed over every scored screening decision (screened plus not a fit); decisions on candidates with no score are listed but left out of the rate.
+- **Disagreements.** A Strong match turned down (with the reason), or a Weak match that was screened, submitted or shortlisted by the client. Each row opens the CV viewer, which logs the view as usual.
+- **Weekly sample.** Ten decisions, disagreements first, then agreements, chosen with a generator seeded by the week start so a reload shows the same ten. Decisions already reviewed stay in the sample when later ones arrive, so a review is never orphaned. The delivery head records "AI was right", "Recruiter was right" or "Both reasonable" with an optional note, once per week and application (`SampleReview`). The band, decision and requisition number are copied onto the review so it survives the application being deleted.
+- **Top ten overlap.** For each requisition with a screening decision in the week: how many of the AI's ten best were screened by the end of the week, and which screened candidates it ranked lower. Ranks use the scores on file now, because earlier ranks are not kept.
+- **AI health and funnel.** Scores by source, AI calls by outcome, tokens, the share of cited quotes found in the CV, downgraded verdicts and parse review reasons; then sourced, screened, submitted, shortlisted, interview, offered and joined counts for the week. The endpoint sends a fixed number of statements however many decisions the week holds, which `test/insightsQueries.test.ts` checks.
+
+**Audit log** (`GET /api/audit`). Fifty a page, newest first, filtered by person, action, an IST date range and a candidate code or REQ number. Every row is a sentence from one function, `describe` in `apps/api/src/auditDescribe.ts`, which has a case for every action; a test fails if the code records an action it cannot describe. Audit metadata holds ids, codes, stages, bands, reasons and counts, never a name, email, phone number or CV text, and a test runs a whole flow to prove it.
+
+**Consent at upload.** Before a batch starts the recruiter ticks that the candidates applied for the role or agreed to be considered, and picks the source (job portal, referral, direct application, agency database or other with a note). The batch endpoint refuses a request without it. Each CV gets a `ConsentRecord` with the person, the time, the source and the notice version (`2026-11`), shown on the candidate profile. This is an attestation by the recruiter, not proof from the candidate.
+
+**Retention.** A candidate is kept 12 months from their last CV upload or stage change (`Candidate.lastActivityAt`). The Data page lists those past it. Nothing is deleted automatically; a scheduled job that does it is left for deployment.
+
+**Erasure.** From the profile the delivery head chooses a reason (candidate request, retention period ended, uploaded by mistake) and types the candidate code. One transaction removes the CVs and files, parsed profile, scores, applications, interview times, messages, consent records and duplicate links, writes a `DeletionRecord` (code, reason, who, when and counts) and audits `CANDIDATE_DELETED`. Earlier audit events stay; they hold ids and codes only. A client who had the candidate no longer sees them. Queued parse and score jobs hold only ids, so a job for erased data finds nothing and stops, and a job already running checks that its rows still exist before it writes. A test searches every text, varchar and jsonb column of every table, read from `information_schema`, for the erased candidate's name, email and phone.
 
 ## Demo accounts
 
