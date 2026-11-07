@@ -47,3 +47,15 @@ export const formatDate = (iso: string) =>
     month: "short",
     year: "numeric",
   });
+
+// A moment in India time, with the year: audit rows and deletions need it.
+export const formatStamp = (iso: string) =>
+  `${new Date(iso).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })} IST`;

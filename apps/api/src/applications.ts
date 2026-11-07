@@ -7,6 +7,7 @@ import {
   type ApplicationInfo,
   type ScoreResponse,
 } from "@hireproof/shared";
+import { markActive } from "./activity";
 import { audit } from "./audit";
 import { requireAuth, requireRole } from "./auth";
 import { prisma } from "./db";
@@ -176,6 +177,7 @@ applications.post(
       res.status(409).json({ error: "This candidate was already moved." });
       return;
     }
+    await markActive(app.id);
     await audit({
       action: "APPLICATION_SCREENED",
       actorId: req.user!.id,
@@ -217,6 +219,7 @@ applications.post(
       res.status(409).json({ error: "This candidate was already moved." });
       return;
     }
+    await markActive(app.id);
     await audit({
       action: "APPLICATION_REJECTED",
       actorId: req.user!.id,
@@ -254,6 +257,7 @@ applications.post(
       });
       return;
     }
+    await markActive(app.id);
     await audit({
       action: "APPLICATION_REOPENED",
       actorId: req.user!.id,
@@ -309,6 +313,7 @@ applications.post(
       res.status(409).json({ error: "This candidate was already moved." });
       return;
     }
+    await markActive(app.id);
     await audit({
       action: "APPLICATION_SUBMITTED",
       actorId: req.user!.id,
@@ -339,6 +344,7 @@ applications.post(
       });
       return;
     }
+    await markActive(app.id);
     await audit({
       action: "SUBMISSION_WITHDRAWN",
       actorId: req.user!.id,

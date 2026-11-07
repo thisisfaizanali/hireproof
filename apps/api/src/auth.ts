@@ -106,7 +106,11 @@ auth.post("/api/auth/login", loginLimiter, async (req, res) => {
   );
 
   if (!user || !passwordOk) {
-    await audit({ action: "LOGIN_FAILED", meta: { email }, ip: req.ip });
+    await audit({
+      action: "LOGIN_FAILED",
+      meta: { knownUser: user !== null },
+      ip: req.ip,
+    });
     res.status(401).json({ error: BAD_LOGIN });
     return;
   }

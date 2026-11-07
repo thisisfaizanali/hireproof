@@ -3,11 +3,14 @@ import express, { type ErrorRequestHandler } from "express";
 import helmet from "helmet";
 import { applications } from "./applications";
 import { auth } from "./auth";
+import { auditLog } from "./auditLog";
 import { candidates } from "./candidates";
 import { clients } from "./clients";
+import { data } from "./data";
 import { cvView } from "./cvView";
 import { env } from "./env";
 import { health } from "./health";
+import { insights } from "./insights";
 import { pipeline } from "./pipeline";
 import { portal } from "./portal";
 import { portalActions } from "./portalActions";
@@ -60,6 +63,9 @@ app.use(pipeline);
 app.use(cvView);
 app.use(portal);
 app.use(portalActions);
+app.use(data);
+app.use(insights);
+app.use(auditLog);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });

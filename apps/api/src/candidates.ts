@@ -339,6 +339,13 @@ candidates.get("/api/candidates/:id", ...readers, async (req, res) => {
           cv: { select: { fileName: true, candidate: true } },
         },
       },
+      consents: {
+        orderBy: { attestedAt: "desc" },
+        include: {
+          cv: { select: { fileName: true } },
+          attestedBy: { select: { name: true } },
+        },
+      },
     },
   });
   if (!row) {
@@ -438,6 +445,15 @@ candidates.get("/api/candidates/:id", ...readers, async (req, res) => {
     duplicates: [...own, ...incoming].sort((a, b) =>
       b.createdAt.localeCompare(a.createdAt),
     ),
+    consents: row.consents.map((c) => ({
+      cvId: c.cvId,
+      fileName: c.cv.fileName,
+      source: c.source,
+      sourceNote: c.sourceNote,
+      attestedBy: c.attestedBy.name,
+      attestedAt: c.attestedAt.toISOString(),
+      noticeVersion: c.noticeVersion,
+    })),
   };
 
   await audit({
@@ -563,6 +579,10 @@ candidates.post(
         data: mergedFields(target, link.cv.profile as unknown as CvProfile),
       });
       await tx.cvDocument.updateMany({
+        where: { candidateId: sourceId },
+        data: { candidateId: targetId },
+      });
+      await tx.consentRecord.updateMany({
         where: { candidateId: sourceId },
         data: { candidateId: targetId },
       });

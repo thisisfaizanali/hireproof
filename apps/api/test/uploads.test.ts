@@ -24,6 +24,7 @@ beforeEach(async () => {
 
 const get = (cookie: string, path: string) =>
   request(app).get(path).set("Cookie", cookie);
+const consent = { basis: true, source: "REFERRAL" } as const;
 const postJson = (cookie: string, path: string, body: object = {}) =>
   request(app).post(path).set("Cookie", cookie).send(body);
 
@@ -31,7 +32,7 @@ async function newBatch(cookie = recruiter.cookie, expectedCount = 3) {
   const res = await postJson(
     cookie,
     `/api/requisitions/${requisitionId}/uploads`,
-    { expectedCount },
+    { expectedCount, consent },
   );
   expect(res.status).toBe(201);
   return res.body.batchId as string;
@@ -124,7 +125,7 @@ describe("creating a batch", () => {
     const res = await postJson(
       recruiter.cookie,
       `/api/requisitions/${requisitionId}/uploads`,
-      { expectedCount },
+      { expectedCount, consent },
     );
     expect(res.status).toBe(400);
   });
@@ -139,9 +140,96 @@ describe("creating a batch", () => {
       "/api/requisitions/nope/uploads",
       {
         expectedCount: 1,
+        consent,
       },
     );
     expect(res.status).toBe(404);
+  });
+});
+
+describe("consent", () => {
+  const batchUrl = () => `/api/requisitions/${requisitionId}/uploads`;
+
+  it.each([
+    ["none given", { expectedCount: 1 }],
+    [
+      "basis not ticked",
+      { expectedCount: 1, consent: { basis: false, source: "REFERRAL" } },
+    ],
+    ["no source", { expectedCount: 1, consent: { basis: true } }],
+    [
+      "other without a note",
+      { expectedCount: 1, consent: { basis: true, source: "OTHER" } },
+    ],
+  ])("refuses a batch with %s", async (_name, body) => {
+    const res = await postJson(recruiter.cookie, batchUrl(), body);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toEqual(expect.any(String));
+    expect(await prisma.uploadBatch.count()).toBe(0);
+  });
+
+  it("stores the attestation against every CV in the batch", async () => {
+    const created = await postJson(recruiter.cookie, batchUrl(), {
+      expectedCount: 2,
+      consent: { basis: true, source: "OTHER", sourceNote: "College fair" },
+    });
+    const batchId = created.body.batchId as string;
+    await send(batchId, [
+      pdf(),
+      { name: "Arjun_Rawat_CV.docx", data: sample("cvs/Arjun_Rawat_CV.docx") },
+    ]);
+    const records = await prisma.consentRecord.findMany();
+    expect(records).toHaveLength(2);
+    expect(new Set(records.map((r) => r.cvId)).size).toBe(2);
+    for (const r of records) {
+      expect(r).toMatchObject({
+        basis: "APPLIED_OR_AGREED",
+        source: "OTHER",
+        sourceNote: "College fair",
+        attestedById: recruiter.user.id,
+        noticeVersion: "2026-11",
+        candidateId: null,
+      });
+    }
+    expect(
+      await prisma.auditEvent.count({
+        where: { action: "UPLOAD_CONSENT_RECORDED", entityId: batchId },
+      }),
+    ).toBe(1);
+  });
+
+  it("links the record to the candidate once the CV is read", async () => {
+    const batchId = await newBatch();
+    await send(batchId, [pdf()]);
+    const [cv] = await prisma.cvDocument.findMany();
+    await run(
+      cv.id,
+      deps(vi.fn().mockResolvedValue(okReply({ name: "Ritika Bansal" }))),
+    );
+    const candidate = await prisma.candidate.findFirstOrThrow();
+    const profile = (
+      await get(recruiter.cookie, `/api/candidates/${candidate.id}`)
+    ).body as CandidateDetail;
+    expect(profile.consents).toMatchObject([
+      {
+        fileName: "Ritika_Bansal_Resume.pdf",
+        source: "REFERRAL",
+        attestedBy: "Test User",
+      },
+    ]);
+  });
+
+  it("refuses files for a batch that has no consent on record", async () => {
+    const batch = await prisma.uploadBatch.create({
+      data: {
+        requisitionId,
+        uploadedById: recruiter.user.id,
+        expectedCount: 1,
+      },
+    });
+    const res = await send(batch.id, [pdf()]);
+    expect(res.status).toBe(409);
+    expect(await prisma.cvDocument.count()).toBe(0);
   });
 });
 

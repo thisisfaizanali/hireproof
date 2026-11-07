@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  CONSENT_BASIS_TEXT,
+  CONSENT_SOURCES,
   CV_LIMITS,
+  type ConsentSource,
   type CvStatus,
   type FileResult,
   type UploadBatchView,
@@ -10,6 +13,9 @@ import {
 import { CvStatusLabel } from "@/components/cv-status";
 import { formatDate } from "@/components/status";
 import { Button } from "@/components/ui/button";
+import { FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { api } from "@/lib/api";
 
 const POLL_MS = 2000;
@@ -81,6 +87,13 @@ export function CvUpload({
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  // Asked once and kept while this page is open, so a second batch from the
+  // same source does not ask again.
+  const [agreed, setAgreed] = useState(false);
+  const [source, setSource] = useState<ConsentSource | "">("");
+  const [sourceNote, setSourceNote] = useState("");
+  const consentReady =
+    agreed && source !== "" && (source !== "OTHER" || sourceNote.trim() !== "");
   const input = useRef<HTMLInputElement>(null);
   // File names announced by this browser session, in order, so server rows
   // (which come back by name) can be matched to them.
@@ -163,6 +176,10 @@ export function CvUpload({
 
   async function start(picked: File[]) {
     setProblem(null);
+    if (!consentReady) {
+      setProblem("Record where these CVs came from before adding files.");
+      return;
+    }
     const rejected: Row[] = [];
     const accepted: File[] = [];
     for (const file of picked) {
@@ -200,7 +217,16 @@ export function CvUpload({
 
     const created = await api<{ batchId: string }>(
       `/api/requisitions/${requisitionId}/uploads`,
-      { json: { expectedCount: accepted.length } },
+      {
+        json: {
+          expectedCount: accepted.length,
+          consent: {
+            basis: true,
+            source,
+            sourceNote: sourceNote.trim() || undefined,
+          },
+        },
+      },
     );
     if (!created.ok) {
       setProblem(created.error);
@@ -300,6 +326,56 @@ export function CvUpload({
             dragging ? "border-ring bg-primary-soft" : "border-input bg-card"
           }`}
         >
+          <div
+            role="group"
+            aria-labelledby="consent-heading"
+            className="flex w-full flex-col gap-3 border-b border-border pb-4"
+          >
+            <p id="consent-heading" className="text-sm font-medium">
+              Before you add files
+            </p>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 shrink-0 accent-[var(--color-primary)]"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+              />
+              {CONSENT_BASIS_TEXT}
+            </label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex w-full flex-col gap-1.5 sm:w-56">
+                <FieldLabel htmlFor="consent-source">
+                  Where they came from
+                </FieldLabel>
+                <Select
+                  id="consent-source"
+                  value={source}
+                  onChange={(e) =>
+                    setSource(e.target.value as ConsentSource | "")
+                  }
+                >
+                  <option value="">Choose a source</option>
+                  {CONSENT_SOURCES.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {source === "OTHER" && (
+                <div className="flex w-full flex-col gap-1.5 sm:max-w-xs">
+                  <FieldLabel htmlFor="consent-note">Say where</FieldLabel>
+                  <Input
+                    id="consent-note"
+                    value={sourceNote}
+                    maxLength={200}
+                    onChange={(e) => setSourceNote(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
           <p>
             Drop PDF or DOCX files here, or choose them. Up to{" "}
             {CV_LIMITS.batchFiles} files, {MAX_MB} MB each.
@@ -319,11 +395,16 @@ export function CvUpload({
           />
           <Button
             variant="outline"
-            disabled={uploading}
+            disabled={uploading || !consentReady}
             onClick={() => input.current?.click()}
           >
             Choose files
           </Button>
+          {!consentReady && (
+            <p className="text-sm text-muted-foreground">
+              Tick the box and say where the CVs came from to add files.
+            </p>
+          )}
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">

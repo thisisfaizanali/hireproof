@@ -9,6 +9,11 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { ROLE_LABEL } from "@/lib/roles";
 
 const NAV = [{ href: "/requisitions", label: "Requisitions" }];
+const DELIVERY_HEAD_NAV = [
+  { href: "/insights", label: "Insights" },
+  { href: "/audit", label: "Audit log" },
+  { href: "/data", label: "Data" },
+];
 
 export function WorkspaceShell({
   user,
@@ -22,7 +27,10 @@ export function WorkspaceShell({
 
   const nav = (
     <nav aria-label="Main" className="flex flex-col gap-1">
-      {NAV.map((item) => {
+      {(user.role === "DELIVERY_HEAD"
+        ? [...NAV, ...DELIVERY_HEAD_NAV]
+        : NAV
+      ).map((item) => {
         const current = pathname.startsWith(item.href);
         return (
           <Link

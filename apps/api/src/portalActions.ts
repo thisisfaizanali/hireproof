@@ -6,7 +6,9 @@ import {
   parseIst,
   type Stage,
 } from "@hireproof/shared";
+import { markActive } from "./activity";
 import { audit } from "./audit";
+import { bandAtDecision, load } from "./applications";
 import { prisma } from "./db";
 import { badInput } from "./http";
 import { clientOnly, visibleTo } from "./portal";
@@ -22,6 +24,12 @@ const own = (req: Request) =>
     },
     select: { id: true, stage: true, requisitionId: true },
   });
+
+// The AI's band when the client decided, so it can be set beside the choice.
+const bandOf = async (applicationId: string) => {
+  const app = await load(applicationId);
+  return app ? bandAtDecision(app) : { band: null };
+};
 
 const NOT_FOUND = { error: "Candidate not found" };
 const ANSWERED = (what: string) => ({
@@ -51,12 +59,13 @@ portalActions.post(
         .json(ANSWERED("This candidate has already been answered."));
       return;
     }
+    await markActive(app.id);
     await audit({
       action: "CLIENT_SHORTLISTED",
       actorId: req.user!.id,
       entityType: "Application",
       entityId: app.id,
-      meta: { requisitionId: app.requisitionId },
+      meta: { requisitionId: app.requisitionId, ...(await bandOf(app.id)) },
       ip: req.ip,
     });
     res.json({ ok: true });
@@ -94,12 +103,17 @@ portalActions.post(
         .json(ANSWERED("This candidate has already been answered."));
       return;
     }
+    await markActive(app.id);
     await audit({
       action: "CLIENT_REJECTED",
       actorId: req.user!.id,
       entityType: "Application",
       entityId: app.id,
-      meta: { requisitionId: app.requisitionId, reason },
+      meta: {
+        requisitionId: app.requisitionId,
+        reason,
+        ...(await bandOf(app.id)),
+      },
       ip: req.ip,
     });
     res.json({ ok: true });
@@ -171,13 +185,18 @@ portalActions.post(
         .json(ANSWERED("This candidate has already been answered."));
       return;
     }
+    await markActive(app.id);
     if (shortlisted) {
       await audit({
         action: "CLIENT_SHORTLISTED",
         actorId: req.user!.id,
         entityType: "Application",
         entityId: app.id,
-        meta: { requisitionId: app.requisitionId, withSlots: true },
+        meta: {
+          requisitionId: app.requisitionId,
+          withSlots: true,
+          ...(await bandOf(app.id)),
+        },
         ip: req.ip,
       });
     }

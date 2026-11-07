@@ -35,7 +35,7 @@ export const PORTAL_FILTERS: {
   { key: "shortlisted", label: "Shortlisted", stages: ["CLIENT_SHORTLISTED"] },
   {
     key: "interviews",
-    label: "Interviews",
+    label: "Interviews and offers",
     stages: ["INTERVIEW", "OFFERED", "JOINED"],
   },
   { key: "rejected", label: "Rejected", stages: ["REJECTED"] },

@@ -96,7 +96,9 @@ describe("POST /api/auth/login", () => {
       "LOGIN_FAILED",
       "LOGIN_SUCCEEDED",
     ]);
-    expect(events[0].meta).toEqual({ email: user.email });
+    // The trail never holds an email address.
+    expect(events[0].meta).toEqual({ knownUser: true });
+    expect(JSON.stringify(events[0])).not.toContain(user.email);
     expect(JSON.stringify(events[0])).not.toContain("wrong-password");
     expect(events[1].actorId).toBe(user.id);
   });

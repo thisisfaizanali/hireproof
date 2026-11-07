@@ -31,7 +31,7 @@ type Tx = Prisma.TransactionClient;
 
 // Serialises the step that decides "new candidate or existing one", so two CVs
 // of the same person finishing together cannot both create a candidate.
-const lockCandidates = (tx: Tx) =>
+export const lockCandidates = (tx: Tx) =>
   tx.$executeRaw`SELECT pg_advisory_xact_lock(7340211)`;
 
 const ensureApplication = (
@@ -161,7 +161,7 @@ export async function persistParsed(
       });
       await tx.candidate.update({
         where: { id: attachTo },
-        data: mergedFields(old, profile),
+        data: { ...mergedFields(old, profile), lastActivityAt: new Date() },
       });
       candidateId = attachTo;
     } else {
@@ -189,6 +189,10 @@ export async function persistParsed(
         parseSource: parsed.parseSource,
         profile: { ...profile, employers: parsed.employers },
       },
+    });
+    await tx.consentRecord.updateMany({
+      where: { cvId: cv.id },
+      data: { candidateId },
     });
 
     if (match) {
@@ -241,6 +245,14 @@ async function attachExactTwin(cv: {
       where: { id: cv.id },
       data: { candidateId, status: "DUPLICATE_FILE", reviewReasons: [] },
     });
+    await tx.consentRecord.updateMany({
+      where: { cvId: cv.id },
+      data: { candidateId },
+    });
+    await tx.candidate.update({
+      where: { id: candidateId },
+      data: { lastActivityAt: new Date() },
+    });
     await tx.duplicateLink.create({
       data: {
         cvId: cv.id,
@@ -259,7 +271,7 @@ const setStatus = (id: string, status: CvStage) =>
   prisma.cvDocument.update({ where: { id }, data: { status } });
 
 async function fail(id: string, failureReason: string) {
-  await prisma.cvDocument.update({
+  await prisma.cvDocument.updateMany({
     where: { id },
     data: { status: "FAILED", failureReason, reviewReasons: [] },
   });
@@ -274,7 +286,7 @@ export async function processCv(cvId: string, deps: JobDeps = defaultDeps) {
   });
   if (claimed.count === 0) return;
 
-  const cv = await prisma.cvDocument.findUniqueOrThrow({
+  const cv = await prisma.cvDocument.findUnique({
     where: { id: cvId },
     select: {
       id: true,
@@ -284,6 +296,8 @@ export async function processCv(cvId: string, deps: JobDeps = defaultDeps) {
       data: true,
     },
   });
+  // Erased between the claim and the read.
+  if (!cv) return;
 
   try {
     const twinned = await attachExactTwin(cv);
@@ -300,6 +314,9 @@ export async function processCv(cvId: string, deps: JobDeps = defaultDeps) {
     // A new CV is new evidence, so an earlier score for it is replaced.
     await queueScoring([applicationId], true);
   } catch (err) {
+    // The candidate may have been erased while this ran: nothing is left to
+    // record, and the transaction that was writing has already rolled back.
+    if ((await prisma.cvDocument.count({ where: { id: cv.id } })) === 0) return;
     if (err instanceof CvExtractError) {
       await fail(cv.id, err.message);
       return;

@@ -104,6 +104,20 @@ Scale, ratio 1.2 from a 16px body. Body text is never smaller than 16px.
 - Rows after screening get a second line: the note to the client, a "Proposed times" panel on `muted` with each time in IST and a Confirm button (outlined small buttons, "None of these work" below), the recorded messages in disclosures, and the next-step buttons. The client answer sits under the name in words ("Rejected by client: Notice period"). "Submit to client" is the filled button on a screened candidate and opens a dialog with the note field and a character count.
 - Mocked messages are always called "recorded, not sent". The delivery head sees the same panels with no buttons.
 
+## Delivery head screens
+
+- Navigation for the delivery head adds Insights, Audit log and Data under Requisitions. They are plain ruled tables on the page background, the same type scale and the same `.num` figures as the rest of the workspace.
+- Insights opens with the week picker (Previous week, the dates in the mono face, Next week, and Back to this week when it is not the current one) and one sentence that states the agreement: "This week the AI and recruiters agreed on 34 of 41 screening decisions." Then the agreement table, disagreements, the weekly sample, the top ten overlap, AI health and the funnel. An empty week says "No decisions this week."
+- Tables are real tables from 48rem and stacked rows below it: a bold row name over a two column list of label and figure. Figures are right aligned in the table. Bands use the existing band label; nothing is coloured to signal good or bad.
+- Sample rows read as two sentences (what the AI said, what was decided) over three outlined buttons. The chosen verdict takes `primary-soft` and `aria-pressed`. A note field sits under them and saves with the next verdict or with "Save note". "6 of 10 reviewed" is a plain status line.
+- A rules score is called out once in the AI health section, in `review-soft`, as a sentence.
+- The audit log has a filter bar (person, action, two dates labelled IST, a candidate or requisition box) with "Show events" as the filled button, then a dense table of time, person, sentence and address, and Previous and Next under it.
+
+## Consent and deletion
+
+- The upload panel opens with a compact group: the consent checkbox in the shared wording and a source select (a text field appears for Other). Choosing files stays disabled, with the reason written under the button, until both are given. The answers are kept while the page is open.
+- The profile lists consent per CV in one sentence each. For the delivery head a ghost button in the destructive colour, "Delete candidate data", sits under the name. It opens the dialog: what will be removed as a list, what the audit log keeps, a reason select, and the candidate code to type. "Delete all data" uses the destructive style and stays disabled until the reason is chosen and the code matches.
+
 ## Voice
 
 Plain and specific, in the staffing firm's own words: requisition, shortlist, notice period, CTC. Empty states say what belongs there and what fills it, in a full sentence with a full stop. No exclamation marks, no marketing verbs.
