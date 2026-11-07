@@ -17,6 +17,7 @@ import { requireAuth, requireRole } from "./auth";
 import { mergedFields } from "./cv/job";
 import type { CvProfile } from "./cv/merge";
 import { prisma } from "./db";
+import { slotView } from "./portal";
 import type { Prisma } from "./generated/prisma/client";
 import { SCORABLE, hasScorableCv, queueCandidate } from "./score/trigger";
 import { pendingState, toSummary } from "./score/view";
@@ -138,6 +139,8 @@ candidates.get(
           },
         },
       },
+      slots: { orderBy: { startsAt: "asc" } },
+      messages: { orderBy: { createdAt: "desc" } },
       scores: {
         select: {
           scorecardVersion: true,
@@ -153,7 +156,7 @@ candidates.get(
 
     // A ranking has to see every row to order it; an unranked list can let
     // the database page it.
-    const [total, found, progress] = await Promise.all([
+    const [total, found, progress, stages] = await Promise.all([
       prisma.application.count({ where }),
       prisma.application.findMany({
         where,
@@ -177,6 +180,11 @@ candidates.get(
               where: { requisitionId, candidate: hasScorableCv },
             }),
           ]),
+      prisma.application.groupBy({
+        by: ["stage"],
+        where: { requisitionId },
+        _count: true,
+      }),
     ]);
 
     type Row = (typeof found)[number];
@@ -254,6 +262,22 @@ candidates.get(
                   cvInFlight: c.cvs.some((cv) => IN_FLIGHT.includes(cv.status)),
                 }),
         cvId: scorable?.id ?? latest?.id ?? null,
+        submissionNote: row.submissionNote,
+        awaitingClient: stage === "SUBMITTED",
+        clientRejection:
+          stage === "REJECTED" &&
+          row.rejectedBy === "CLIENT" &&
+          row.clientRejectReason
+            ? { reason: row.clientRejectReason, note: row.clientRejectNote }
+            : null,
+        slots: row.slots.map(slotView),
+        messages: row.messages.map((m) => ({
+          id: m.id,
+          recipient: m.recipient,
+          subject: m.subject,
+          body: m.body,
+          createdAt: m.createdAt.toISOString(),
+        })),
       };
     });
     const list: CandidateList = {
@@ -264,6 +288,7 @@ candidates.get(
       ranked: version !== null,
       scorecardVersion: version,
       progress: progress && { scored: progress[0], total: progress[1] },
+      stageCounts: Object.fromEntries(stages.map((s) => [s.stage, s._count])),
     };
     res.json(list);
   },

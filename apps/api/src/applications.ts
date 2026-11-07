@@ -99,6 +99,11 @@ applications.get(
       rejectReason: app.rejectReason,
       rejectNote: app.rejectNote,
       decidedAt: app.decidedAt?.toISOString() ?? null,
+      submissionNote: app.submissionNote,
+      clientRejection:
+        app.rejectedBy === "CLIENT" && app.clientRejectReason
+          ? { reason: app.clientRejectReason, note: app.clientRejectNote }
+          : null,
       requisition: {
         id: app.requisition.id,
         number: app.requisition.number,

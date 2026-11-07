@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ClientRejectReason } from "./pipeline";
 
 export const Verdict = z.enum(["MET", "PARTIAL", "NOT_FOUND"]);
 export type Verdict = z.infer<typeof Verdict>;
@@ -151,7 +152,17 @@ export const SCORE_STATE_LABEL: Record<
 };
 
 export const BAND_FILTERS = ["STRONG", "POSSIBLE", "WEAK", "UNSCORED"] as const;
-export const STAGE_FILTERS = ["SOURCED", "SCREENED", "REJECTED"] as const;
+export const STAGE_FILTERS = [
+  "SOURCED",
+  "SCREENED",
+  "SUBMITTED",
+  "CLIENT_SHORTLISTED",
+  "INTERVIEW",
+  "OFFERED",
+  "JOINED",
+  "REJECTED",
+  "WITHDRAWN",
+] as const;
 
 export interface ApplicationInfo {
   id: string;
@@ -159,6 +170,8 @@ export interface ApplicationInfo {
   rejectReason: RejectReason | null;
   rejectNote: string | null;
   decidedAt: string | null;
+  submissionNote: string | null;
+  clientRejection: { reason: ClientRejectReason; note: string | null } | null;
   requisition: { id: string; number: number; title: string };
   candidate: { id: string; code: string; name: string };
   // The CV the score was read from, and whether this user has opened it.

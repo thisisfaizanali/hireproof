@@ -1,4 +1,6 @@
+import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
+import { app } from "../src/app";
 import { prisma } from "../src/db";
 import { resetDb } from "./helpers";
 import {
@@ -308,5 +310,83 @@ describe("the delivery head reads and changes nothing", () => {
     }
     expect((await post(head.cookie, "/api/slots/x/confirm")).status).toBe(403);
     expect(await stageOf(application.id)).toBe("SCREENED");
+  });
+});
+
+describe("the recruiter's list", () => {
+  it("counts every stage and shows what the client has done", async () => {
+    await candidateAt(requisitionId, recruiter.user.id, "SOURCED", "A Sourced");
+    await candidateAt(
+      requisitionId,
+      recruiter.user.id,
+      "SCREENED",
+      "B Screened",
+    );
+    const waiting = await candidateAt(
+      requisitionId,
+      recruiter.user.id,
+      "SUBMITTED",
+      "C Waiting",
+    );
+    const rejected = await candidateAt(
+      requisitionId,
+      recruiter.user.id,
+      "SUBMITTED",
+      "D Rejected",
+    );
+    await post(
+      priya.cookie,
+      `/api/portal/applications/${rejected.application.id}/reject`,
+      {
+        reason: "NOTICE_PERIOD",
+      },
+    );
+    const proposed = await withSlots(2);
+
+    const res = await request(app)
+      .get(`/api/requisitions/${requisitionId}/candidates`)
+      .set("Cookie", recruiter.cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.stageCounts).toEqual({
+      SOURCED: 1,
+      SCREENED: 1,
+      SUBMITTED: 1,
+      REJECTED: 1,
+      CLIENT_SHORTLISTED: 1,
+    });
+    const byName = Object.fromEntries(
+      res.body.items.map((i: { name: string }) => [i.name, i]),
+    );
+    expect(byName["C Waiting"]).toMatchObject({
+      awaitingClient: true,
+      clientRejection: null,
+      submissionNote: expect.stringContaining("Spring Boot"),
+    });
+    expect(byName["D Rejected"]).toMatchObject({
+      awaitingClient: false,
+      clientRejection: { reason: "NOTICE_PERIOD", note: null },
+    });
+    expect(byName["A Sourced"]).toMatchObject({
+      submissionNote: null,
+      slots: [],
+    });
+    const withSlot = res.body.items.find(
+      (i: { applicationId: string }) =>
+        i.applicationId === proposed.application.id,
+    );
+    expect(withSlot.slots.map((s: { status: string }) => s.status)).toEqual([
+      "PROPOSED",
+      "PROPOSED",
+    ]);
+    expect(waiting.application.id).toBeTruthy();
+
+    const filtered = await request(app)
+      .get(`/api/requisitions/${requisitionId}/candidates?stage=SUBMITTED`)
+      .set("Cookie", recruiter.cookie);
+    expect(filtered.body.items.map((i: { name: string }) => i.name)).toEqual([
+      "C Waiting",
+    ]);
+    // The strip keeps counting everything while a stage is filtered.
+    expect(filtered.body.stageCounts.SOURCED).toBe(1);
   });
 });

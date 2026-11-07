@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ClientRejection, MessageView, SlotView } from "./pipeline";
 import type { ConstraintFlag, ScoreState, ScoreSummary } from "./score";
 
 export const CV_LIMITS = {
@@ -107,6 +108,11 @@ export interface CandidateRow {
   constraintFlags: ConstraintFlag[];
   scoreState: ScoreState | null;
   cvId: string | null;
+  submissionNote: string | null;
+  awaitingClient: boolean;
+  clientRejection: ClientRejection | null;
+  slots: SlotView[];
+  messages: MessageView[];
 }
 
 export interface CandidateList {
@@ -117,6 +123,8 @@ export interface CandidateList {
   ranked: boolean;
   scorecardVersion: number | null;
   progress: { scored: number; total: number } | null;
+  // Applications at each stage in the whole requisition, whatever the filters.
+  stageCounts: Record<string, number>;
 }
 
 export interface CandidateCv {
