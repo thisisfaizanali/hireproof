@@ -34,7 +34,13 @@ const labelOnly = (line: string) =>
   PERSONAL_LABEL.test(line.trim()) &&
   line.trim().replace(PERSONAL_LABEL, "").trim() === "";
 
-export function redact(text: string, name: string | null): string {
+// `keepName` is for the text a client reads: contact and personal fields go,
+// the name stays.
+export function redact(
+  text: string,
+  name: string | null,
+  options: { keepName?: boolean } = {},
+): string {
   const kept: string[] = [];
   let dropNextValue = false;
   for (const line of text.split("\n")) {
@@ -58,7 +64,8 @@ export function redact(text: string, name: string | null): string {
     .replace(EMAIL_ANYWHERE, "[email]")
     .replace(PHONE_ANYWHERE, "[phone]");
 
-  for (const token of new Set(name?.split(/\s+/) ?? [])) {
+  const hidden = options.keepName ? [] : (name?.split(/\s+/) ?? []);
+  for (const token of new Set(hidden)) {
     const clean = token.replace(/[^\p{L}'-]/gu, "");
     if (clean.length < 2) continue;
     out = out.replace(
@@ -71,3 +78,8 @@ export function redact(text: string, name: string | null): string {
   }
   return out.replace(/\n{3,}/g, "\n\n").trim();
 }
+
+// A last guard for text a client reads: whatever else is true of the source,
+// no email address or phone number gets through.
+export const maskContacts = (text: string) =>
+  text.replace(EMAIL_ANYWHERE, "[email]").replace(PHONE_ANYWHERE, "[phone]");

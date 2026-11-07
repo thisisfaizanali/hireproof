@@ -2,7 +2,7 @@
 
 Hireproof is a resume screening tool for staffing firms. Recruiters create a job requisition, the AI extracts a scorecard from the job description, and recruiters bulk-upload CVs. Each CV is scored against the scorecard with evidence quoted from the CV. Recruiters then submit candidates to a client portal, and a pipeline tracks each requisition.
 
-This repository holds the foundation (sign-in, role-based shells, API, shared schemas, local database), requisitions with scorecard extraction from job descriptions, bulk CV upload with parsing, OCR for scans and duplicate detection, and evidence-backed scoring with a ranked candidate list and a CV viewer.
+This repository holds the foundation (sign-in, role-based shells, API, shared schemas, local database), requisitions with scorecard extraction from job descriptions, bulk CV upload with parsing, OCR for scans and duplicate detection, evidence-backed scoring with a ranked candidate list and a CV viewer, and the client portal with the pipeline from submission to joining.
 
 ## Prerequisites
 
@@ -118,9 +118,13 @@ A confirmed scorecard ranks the candidates of its requisition. For each criterio
 
 A met criterion earns its whole share and a partial one half. Experience is full inside the range, falls in a straight line to zero two years outside it, and is half when the CV does not state it. Points a group cannot use move on: with no nice-to-haves the must-haves hold 90, with no must-haves the nice-to-haves hold 90, and with neither, experience is the whole score. The total is out of 100, rounded.
 
-**Bands.** Strong match is 75 or more with every must-have met. Possible match is 50 or more. Weak match is below 50.
+**Bands.** Strong match is 75 or more with no must-have missing, so a partial must-have is allowed. `npm run db:reband -w @hireproof/api` applies the rule to stored scores from their stored criteria, with no model call. Possible match is 50 or more. Weak match is below 50.
 
-**Constraints are flags, not points.** Notice over the limit, expected CTC over the budget, a location outside the list, and any of those not stated are shown beside the score and never change it.
+**Constraints are flags, not points.** Notice over the limit, expected CTC over the budget, a location outside the list, and any of those not stated are shown beside the score and never change it. The ranked list shows them as short labels (Notice, CTC, Location, or "unknown" when the CV does not say) with the full sentence as a tooltip and an accessible label.
+
+**Soft skills.** A must-have a CV cannot evidence (communication, team player, attitude, willingness to learn, flexibility with shifts) is flagged for review when the scorecard is extracted, with the note "Hard to check from a CV, consider making it a nice-to-have". The list is `isSoftSkill` in `packages/shared`. A degree requirement stays a must-have: the scoring prompt, and the rules scorer, take a line in the education section as its evidence.
+
+**Unchanged scorecards.** Confirming stores a hash of the criteria (kind and label) and the ranges. Confirming the same content again keeps the version, marks no score stale and queues nothing.
 
 **Defences.** The CV goes to the model as untrusted data between markers, with an instruction to ignore anything addressed to it. A skill that only sits in a skills list is partial at most. Both are checked against the sample corpus by `eval:score`.
 
@@ -130,7 +134,21 @@ A met criterion earns its whole share and a partial one half. Experience is full
 
 **Limits.** The CV part of a prompt is capped at 6,000 characters (about 1,700 tokens), and low-value sections (hobbies, references, languages) are dropped first. A score takes about 1,400 tokens and two seconds on gpt-oss-120b, so a requisition of 45 CVs costs about 60,000 tokens, a third of a day's free budget.
 
-**Decisions.** "Mark screened" and "Not a fit" (with a reason) are audited with the AI band at the time. The server refuses "Mark screened" unless the same recruiter has a logged view of that candidate's newest CV, and the page disables the button with the same sentence. Every view of a CV, as the original or as text, is logged, including the delivery head's. The delivery head reads everything and changes nothing; hiring managers get no access yet.
+**Decisions.** "Mark screened" and "Not a fit" (with a reason) are audited with the AI band at the time. The server refuses "Mark screened" unless the same recruiter has a logged view of that candidate's newest CV, and the page disables the button with the same sentence. Every view of a CV, as the original or as text, is logged, including the delivery head's. The delivery head reads everything and changes nothing.
+
+## Client portal and pipeline
+
+A recruiter submits a screened candidate with a note of 20 to 600 characters on why this candidate. Only a screened candidate can be submitted, and a submission can be withdrawn until the client acts. Stages move through one pure function, `canMove(from, to, role)` in `packages/shared`, with a test over every role and pair; the move route answers 409 with a plain message for any other move.
+
+**What a hiring manager sees.** Name, candidate code, current role, experience, notice, location and skills; the note from the recruiter; each must-have and nice-to-have with its verdict and the verified quotes; the constraint flags as sentences; and a client CV text. Contact details are left out of the response type, not hidden in the page: no email, phone, file, raw text, 0 to 100 total, score source or review reason ever leaves the API for a client, and quotes, notes and notice text also pass through a final email and phone mask. The client CV text is the extracted text through the same redaction code as the scoring text with a `keepName` option, so contact and personal fields go and the name stays. The portal says: "Contact details are shared by your Hireproof recruiter."
+
+**Tenancy.** Every portal query carries the manager's client in the `where` clause, so another client's requisition or application is a 404, not a 403, and a draft requisition or an application that has not been submitted is never found. Portal routes refuse recruiters and the delivery head (403), and hiring managers get 403 on every internal route.
+
+**Client actions** (own client, submitted applications only, none can be undone): shortlist; reject with a reason (skills gap, experience, notice period, compensation, location, already interviewed, other with a note), recorded as the client's decision in its own columns so the delivery head report can tell it from a recruiter's rejection; propose one to three interview times. A time is read in IST, must be in the future, on a weekday, and finish by 19:00 (start from 9:00). Proposing a time also shortlists the candidate.
+
+**Recruiter side.** Pending proposals show under the candidate in the requisition list. Confirm books one time (stage Interview, the other times declined) and records a message to the candidate; "None of these work" declines all of them and records a message to the client. Messaging is mocked: an `OutboundMessage` row holds the subject and body with status MOCKED, and the page says the message was recorded, not sent. After the interview a recruiter moves a candidate to offered or not selected, then to joined or offer fell through. Each move is audited (`STAGE_CHANGED` with the stages), as are submission, withdrawal, the client views and answers, and the slots.
+
+The seed leaves a believable week: Kestrel has five submissions (two awaiting the client, one shortlisted, one rejected for notice period, one with two proposed times waiting on the recruiter) and Sahyadri has three (one at interview with a confirmed time, one offered, one to review).
 
 ## Demo accounts
 
@@ -159,18 +177,19 @@ With `NEXT_PUBLIC_DEMO_LOGINS=true` the login page also lists these accounts as 
 
 Run from the repository root.
 
-| Script                 | What it does                                                    |
-| ---------------------- | --------------------------------------------------------------- |
-| `npm run dev`          | Runs the API and web app with reload                            |
-| `npm run build`        | Builds shared, API and web                                      |
-| `npm run lint`         | ESLint across all workspaces                                    |
-| `npm run typecheck`    | TypeScript checks across all workspaces                         |
-| `npm test`             | API tests (Vitest and Supertest)                                |
-| `npm run format`       | Formats the repository with Prettier                            |
-| `npm run format:check` | Fails if any file is not formatted                              |
-| `npm run db:migrate`   | Applies migrations to the local database (creates new ones)     |
-| `npm run db:seed`      | Creates or updates the fictional clients and demo users         |
-| `npm run db:reset`     | Drops the local database, re-applies migrations and seeds again |
+| Script                                | What it does                                                    |
+| ------------------------------------- | --------------------------------------------------------------- |
+| `npm run dev`                         | Runs the API and web app with reload                            |
+| `npm run build`                       | Builds shared, API and web                                      |
+| `npm run lint`                        | ESLint across all workspaces                                    |
+| `npm run typecheck`                   | TypeScript checks across all workspaces                         |
+| `npm test`                            | API tests (Vitest and Supertest)                                |
+| `npm run format`                      | Formats the repository with Prettier                            |
+| `npm run format:check`                | Fails if any file is not formatted                              |
+| `npm run db:migrate`                  | Applies migrations to the local database (creates new ones)     |
+| `npm run db:seed`                     | Creates or updates the fictional clients and demo users         |
+| `npm run db:reset`                    | Drops the local database, re-applies migrations and seeds again |
+| `npm run db:reband -w @hireproof/api` | Re-bands stored scores under the current band rule (no model)   |
 
 ## Tests
 

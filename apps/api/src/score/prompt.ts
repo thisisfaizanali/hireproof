@@ -29,6 +29,8 @@ For each criterion, give a verdict from the CV text alone:
 - PARTIAL: the CV shows it only weakly or in part, for example a small or learning use, a related skill, or less time or depth than the criterion asks for.
 - NOT_FOUND: the CV does not show it.
 
+A degree or education requirement, such as graduate, a bachelor's degree or an MBA, is met by a line in the education section that names a matching qualification, and that line is the quote. It does not need to appear in a job line.
+
 A skill that appears only in a skills list, with no use in any role, project or experience line, is PARTIAL at most. A long skills list over a thin work history proves nothing. Words such as learning, exposure or basic make it PARTIAL at most.
 
 For MET and PARTIAL give one or two quotes. Each quote is at most 25 words, copied exactly, character for character, from the CV, and is the text that shows the point. Never paraphrase or fix spelling. For NOT_FOUND give an empty list.

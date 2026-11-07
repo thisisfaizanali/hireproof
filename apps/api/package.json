@@ -17,7 +17,8 @@
     "capture:cvs": "tsx --env-file-if-exists=../../.env scripts/capture-cvs.ts",
     "eval:cv": "tsx --env-file-if-exists=../../.env scripts/eval-cv.ts",
     "capture:scores": "tsx --env-file-if-exists=../../.env scripts/capture-scores.ts",
-    "eval:score": "tsx --env-file-if-exists=../../.env scripts/eval-score.ts"
+    "eval:score": "tsx --env-file-if-exists=../../.env scripts/eval-score.ts",
+    "db:reband": "tsx --env-file-if-exists=../../.env scripts/reband-scores.ts"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

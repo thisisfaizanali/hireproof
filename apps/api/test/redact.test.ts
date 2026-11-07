@@ -66,6 +66,24 @@ describe("redact", () => {
     }
   });
 
+  it("keeps the name but drops contact and personal fields for a client", async () => {
+    let checked = 0;
+    for (const { cv, text } of await textCorpus()) {
+      const out = redact(text, cv.name, { keepName: true });
+      expect(findEmail(out), cv.file).toBeNull();
+      expect(findPhone(out), cv.file).toBeNull();
+      const first = cv.name.split(" ")[0].toLowerCase();
+      if (text.toLowerCase().includes(first)) {
+        expect(out.toLowerCase(), cv.file).toContain(first);
+      }
+      for (const value of personalValues(text).filter((v) => v.length >= 4)) {
+        expect(out, `${cv.file}: ${value}`).not.toContain(value);
+      }
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(30);
+  });
+
   it("keeps skills and experience", async () => {
     for (const { cv, text } of await textCorpus()) {
       const out = redact(text, cv.name);

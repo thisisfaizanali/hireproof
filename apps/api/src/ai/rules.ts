@@ -1,6 +1,7 @@
 import {
   LIMITS,
   findSkills,
+  flagSoftSkills,
   type CriterionView,
   type ScorecardFields,
 } from "@hireproof/shared";
@@ -135,14 +136,15 @@ export function rulesScorecard(jdText: string): Extracted {
       ...cited(true, sentenceAround(jdText, index)),
     }));
 
+  const soft = flagSoftSkills(criteria, []);
   const result: Extracted = {
     title: null,
-    criteria,
+    criteria: soft.criteria,
     experience: experience(jdText),
     notice: notice(jdText),
     ctc: ctc(jdText),
     locations: locations(jdText),
-    ambiguities: [],
+    ambiguities: soft.ambiguities,
   };
 
   if (result.experience.minYears === null) {

@@ -89,6 +89,21 @@ Scale, ratio 1.2 from a 16px body. Body text is never smaller than 16px.
 - The CV viewer puts the original or its text on the left and the breakdown and decision on the right. Below 64rem the CV comes first and the breakdown follows. Verified quotes are marked in the text view with `primary-soft`; picking a quote in the breakdown scrolls to it and marks it with `primary`.
 - "Mark screened" is the one filled button. It is disabled until the CV is opened, and the sentence that says why stays under it.
 
+## Client portal
+
+- The portal is designed at 375px first and widens to two columns from 48rem. Pages are plain lists and ruled sections on the page background, with one border and no shadow.
+- Home is a plain list of requisitions: title, REQ number and counts in words ("3 awaiting your review"). The requisition page is a filter list on the left from 48rem (a wrapping row of buttons below it) and stacked candidate rows on the right: name and status, role, experience, notice and location, then the band label, "5 of 5 must-haves" and the constraint flags.
+- The candidate page opens with the recruiter note on `muted`, then the must-haves and nice-to-haves with a verdict word and each verified quote on `primary-soft` with a 2px `primary` edge, then the flags, then the CV text in a disclosure. From 48rem the profile, interview times and actions sit in a sticky right column.
+- On a phone the actions (Shortlist, Propose times, Reject) are a bar fixed to the bottom edge, three `lg` buttons that are 44px tall. Shortlist is the one filled button. Reject and Propose times open a sheet from the bottom edge on a phone and a centred panel from 48rem. Reject lists the reasons as 44px radio rows; its confirm button uses the destructive style.
+- The time form has one fieldset per time with a native date and time input labelled "(IST)", a length, a format and an optional note. Problems show under the field in the destructive colour and clear when the field changes.
+- States are plain sentences: loading rows, "Nothing to review yet. Your recruiter will submit candidates here.", an error with a retry, and after an action "Shortlisted. Your recruiter has been told." in a `success-soft` panel.
+
+## Recruiter pipeline controls
+
+- A strip of stage buttons (All, then Sourced, Screened, Submitted, Shortlisted, Interview, Offered, Joined, Rejected) sits above the candidate filters. Each shows its count in the mono face; the current one takes `primary-soft`. Counts cover the whole requisition, whatever else is filtered.
+- Rows after screening get a second line: the note to the client, a "Proposed times" panel on `muted` with each time in IST and a Confirm button (outlined small buttons, "None of these work" below), the recorded messages in disclosures, and the next-step buttons. The client answer sits under the name in words ("Rejected by client: Notice period"). "Submit to client" is the filled button on a screened candidate and opens a dialog with the note field and a character count.
+- Mocked messages are always called "recorded, not sent". The delivery head sees the same panels with no buttons.
+
 ## Voice
 
 Plain and specific, in the staffing firm's own words: requisition, shortlist, notice period, CTC. Empty states say what belongs there and what fills it, in a full sentence with a full stop. No exclamation marks, no marketing verbs.

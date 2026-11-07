@@ -8,6 +8,9 @@ import { clients } from "./clients";
 import { cvView } from "./cvView";
 import { env } from "./env";
 import { health } from "./health";
+import { pipeline } from "./pipeline";
+import { portal } from "./portal";
+import { portalActions } from "./portalActions";
 import { requisitions } from "./requisitions";
 import { uploads } from "./uploads";
 
@@ -53,7 +56,10 @@ app.use(requisitions);
 app.use(uploads);
 app.use(candidates);
 app.use(applications);
+app.use(pipeline);
 app.use(cvView);
+app.use(portal);
+app.use(portalActions);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });

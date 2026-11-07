@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { constraintFlags } from "@hireproof/shared";
 import {
   computeScore,
   experienceFit,
@@ -56,6 +57,37 @@ const verdict = (
 const all = (v: ResolvedVerdict["verdict"], c = card()) =>
   c.criteria.map((x) => verdict(x.id, v));
 
+describe("constraint flags", () => {
+  it("recognises every sentence computeScore writes about notice, CTC and location", () => {
+    const over = computeScore(
+      card(),
+      all("MET"),
+      profile({ noticeDays: 90, expectedCtcLpa: 30, location: "Pune" }),
+      "RULES",
+    );
+    expect(constraintFlags(over.flags).map((f) => [f.kind, f.unknown])).toEqual(
+      [
+        ["NOTICE", false],
+        ["CTC", false],
+        ["LOCATION", false],
+      ],
+    );
+    const unknown = computeScore(
+      card(),
+      all("MET"),
+      profile({ noticeDays: null, expectedCtcLpa: null, location: null }),
+      "AI",
+    );
+    expect(
+      constraintFlags(unknown.flags).map((f) => [f.kind, f.unknown]),
+    ).toEqual([
+      ["NOTICE", true],
+      ["CTC", true],
+      ["LOCATION", true],
+    ]);
+  });
+});
+
 describe("computeScore", () => {
   it("gives 100 for everything met inside the experience range", () => {
     const s = computeScore(card(), all("MET"), profile(), "AI");
@@ -106,7 +138,7 @@ describe("computeScore", () => {
     expect(computeScore(c, all3, profile(), "AI").total).toBe(100);
   });
 
-  it("is strong only at 75 with every must-have met", () => {
+  it("is strong at 75 with no must-have missing, and a partial one is allowed", () => {
     const strong = computeScore(
       card(),
       [
@@ -121,8 +153,8 @@ describe("computeScore", () => {
     expect(strong.total).toBe(80);
     expect(strong.band).toBe("STRONG");
 
-    // 35 + 17.5 + 20 + 10 = 82.5 rounds up, but one must-have is only partial
-    const notAll = computeScore(
+    // 35 + 17.5 + 20 + 10 = 82.5 rounds up; the partial must-have is allowed
+    const partial = computeScore(
       card(),
       [
         verdict("m1", "MET"),
@@ -133,8 +165,49 @@ describe("computeScore", () => {
       profile(),
       "AI",
     );
-    expect(notAll.total).toBe(83);
-    expect(notAll.band).toBe("POSSIBLE");
+    expect(partial.total).toBe(83);
+    expect(partial.mustHavesMet).toBe(1);
+    expect(partial.band).toBe("STRONG");
+  });
+
+  it("is not strong when a must-have is not found, whatever the total", () => {
+    const three = card({
+      criteria: [
+        { id: "m1", label: "Java", kind: "MUST_HAVE" },
+        { id: "m2", label: "Spring Boot", kind: "MUST_HAVE" },
+        { id: "m3", label: "SQL", kind: "MUST_HAVE" },
+        { id: "n1", label: "Kafka", kind: "NICE_TO_HAVE" },
+      ],
+    });
+    const s = computeScore(
+      three,
+      [
+        verdict("m1", "MET"),
+        verdict("m2", "MET"),
+        verdict("m3", "NOT_FOUND"),
+        verdict("n1", "MET"),
+      ],
+      profile(),
+      "AI",
+    );
+    expect(s.total).toBe(77);
+    expect(s.band).toBe("POSSIBLE");
+  });
+
+  it("is not strong below 75 even with no must-have missing", () => {
+    const s = computeScore(
+      card(),
+      [
+        verdict("m1", "PARTIAL"),
+        verdict("m2", "PARTIAL"),
+        verdict("n1", "NOT_FOUND"),
+        verdict("n2", "NOT_FOUND"),
+      ],
+      profile(),
+      "AI",
+    );
+    expect(s.total).toBe(45);
+    expect(s.band).toBe("WEAK");
   });
 
   it("puts 50 to 74 in possible and below 50 in weak", () => {
@@ -501,6 +574,25 @@ describe("rulesScore", () => {
     expect(verdictOf(rulesScore(criteria, ritika), "excel")).toBe("NOT_FOUND");
   });
 
+  it("meets a graduate requirement from the education section only", () => {
+    const grad = [{ id: "g", label: "Graduate" }];
+    const cv = [
+      "SKILLS",
+      "Java",
+      "",
+      "EDUCATION",
+      "B.Com, Delhi University, 2016",
+      "",
+      "EXPERIENCE",
+      "KYC analyst",
+    ].join("\n");
+    const [met] = rulesScore(grad, cv);
+    expect(met.verdict).toBe("MET");
+    expect(met.quotes).toEqual(["B.Com, Delhi University, 2016"]);
+    const none = ["SKILLS", "Java", "", "EXPERIENCE", "B.Com team"].join("\n");
+    expect(rulesScore(grad, none)[0].verdict).toBe("NOT_FOUND");
+  });
+
   it("returns quotes that verify against the same text", () => {
     const rows = rulesScore(criteria, ritika);
     const checked = verifyEvidence(criteria, rows, ritika);
@@ -519,6 +611,12 @@ describe("scorePrompt", () => {
     expect(messages[0].content).toMatch(/untrusted data/);
     expect(messages[0].content).toMatch(/ignore them/);
     expect(messages[1].content).toContain("<<<CV\nSome CV text\nCV>>>");
+  });
+
+  it("treats a line in the education section as evidence for a degree requirement", () => {
+    const { messages } = scorePrompt(criteria, "Some CV text");
+    expect(messages[0].content).toMatch(/education section/);
+    expect(messages[0].content).toMatch(/graduate/);
   });
 
   it("cannot be closed early by a CV that contains the delimiter", () => {

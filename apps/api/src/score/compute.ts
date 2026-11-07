@@ -59,7 +59,7 @@ export function formulaText(pools: Pools) {
     `experience ${pools.experience}`,
   ].filter(Boolean);
   const text = parts.join(", ");
-  return `${text.charAt(0).toUpperCase()}${text.slice(1)}. A met criterion earns its full share and a partial one half. Nothing counts without a quote found in the CV.`;
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}. A met criterion earns its full share and a partial one half. Nothing counts without a quote found in the CV. Strong match needs 75 or more and no must-have missing.`;
 }
 
 const STRONG_AT = 75;
@@ -100,6 +100,18 @@ export interface ComputedScore {
   pools: Pools;
   criteria: CriterionScore[];
   flags: string[];
+}
+
+// Strong needs the total and no must-have missing; a partial one is allowed.
+export function bandFor(
+  total: number,
+  criteria: Pick<CriterionScore, "kind" | "verdict">[],
+): Band {
+  const missing = criteria.some(
+    (c) => c.kind === "MUST_HAVE" && c.verdict === "NOT_FOUND",
+  );
+  if (total >= STRONG_AT && !missing) return "STRONG";
+  return total >= POSSIBLE_AT ? "POSSIBLE" : "WEAK";
 }
 
 const SHARE: Record<Verdict, number> = { MET: 1, PARTIAL: 0.5, NOT_FOUND: 0 };
@@ -192,13 +204,7 @@ export function computeScore(
   const mustHavesMet = criteria.filter(
     (c) => c.kind === "MUST_HAVE" && c.verdict === "MET",
   ).length;
-
-  const band: Band =
-    total >= STRONG_AT && mustHavesMet === musts.length
-      ? "STRONG"
-      : total >= POSSIBLE_AT
-        ? "POSSIBLE"
-        : "WEAK";
+  const band = bandFor(total, criteria);
 
   if (card.noticeMaxDays !== null) {
     if (profile.noticeDays === null) flags.push("Notice period is not stated.");

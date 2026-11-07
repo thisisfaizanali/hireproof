@@ -229,3 +229,28 @@ export function findQuote(
   if (at < 0) return null;
   return { start: start[at], end: end[at + wanted.length - 1] };
 }
+
+// Requirements a CV cannot evidence. Kept as whole words so "Team Lead" and
+// "Communications Engineer" are not caught.
+const SOFT_SKILLS =
+  /\b(?:communication|communicator|team\s*player|team\s*work|teamwork|team\s*spirit|attitude|interpersonal|people\s*skills|willingness|willing\s+to\s+(?:learn|relocate)|quick\s+learner|fast\s+learner|self[-\s]?motivated|hard[-\s]?working|flexib\w+|positive|proactive|passion\w*|eager\w*|enthusias\w+)\b/i;
+
+export const isSoftSkill = (label: string) => SOFT_SKILLS.test(label);
+
+export const SOFT_SKILL_NOTE =
+  "Hard to check from a CV, consider making it a nice-to-have";
+
+// A must-have a CV cannot evidence waits for a person: it is flagged for
+// review and the scorecard says why. Everything else is returned unchanged.
+export function flagSoftSkills<T extends CriterionView>(
+  criteria: T[],
+  ambiguities: string[],
+): { criteria: T[]; ambiguities: string[] } {
+  const notes: string[] = [];
+  const flagged = criteria.map((c) => {
+    if (c.kind !== "MUST_HAVE" || !isSoftSkill(c.label)) return c;
+    notes.push(`${c.label}: ${SOFT_SKILL_NOTE}.`);
+    return { ...c, needsReview: true };
+  });
+  return { criteria: flagged, ambiguities: [...ambiguities, ...notes] };
+}

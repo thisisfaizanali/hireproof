@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ClientRejectReason } from "./pipeline";
 
 export const Verdict = z.enum(["MET", "PARTIAL", "NOT_FOUND"]);
 export type Verdict = z.infer<typeof Verdict>;
@@ -50,6 +51,38 @@ export const RejectInput = z
     }
   });
 export type RejectInput = z.infer<typeof RejectInput>;
+
+export type ConstraintKind = "NOTICE" | "CTC" | "LOCATION";
+
+export interface ConstraintFlag {
+  kind: ConstraintKind;
+  // The value is missing from the CV, as opposed to over the limit.
+  unknown: boolean;
+  text: string;
+}
+
+export const CONSTRAINT_LABEL: Record<ConstraintKind, string> = {
+  NOTICE: "Notice",
+  CTC: "CTC",
+  LOCATION: "Location",
+};
+
+// Scoring writes these sentences (score/compute.ts); a test keeps the two in step.
+const CONSTRAINT_PATTERNS: [ConstraintKind, RegExp][] = [
+  ["NOTICE", /^Notice\b/],
+  ["CTC", /^Expect/],
+  ["LOCATION", /^(?:Location|Based in)\b/],
+];
+
+// The flags about notice, CTC and location, which never change a score.
+export function constraintFlags(flags: string[]): ConstraintFlag[] {
+  return flags.flatMap((text) => {
+    const hit = CONSTRAINT_PATTERNS.find(([, pattern]) => pattern.test(text));
+    return hit
+      ? [{ kind: hit[0], unknown: text.endsWith("not stated."), text }]
+      : [];
+  });
+}
 
 export const SCREEN_GATE_MESSAGE =
   "Open the CV before marking this candidate screened.";
@@ -119,7 +152,17 @@ export const SCORE_STATE_LABEL: Record<
 };
 
 export const BAND_FILTERS = ["STRONG", "POSSIBLE", "WEAK", "UNSCORED"] as const;
-export const STAGE_FILTERS = ["SOURCED", "SCREENED", "REJECTED"] as const;
+export const STAGE_FILTERS = [
+  "SOURCED",
+  "SCREENED",
+  "SUBMITTED",
+  "CLIENT_SHORTLISTED",
+  "INTERVIEW",
+  "OFFERED",
+  "JOINED",
+  "REJECTED",
+  "WITHDRAWN",
+] as const;
 
 export interface ApplicationInfo {
   id: string;
@@ -127,6 +170,8 @@ export interface ApplicationInfo {
   rejectReason: RejectReason | null;
   rejectNote: string | null;
   decidedAt: string | null;
+  submissionNote: string | null;
+  clientRejection: { reason: ClientRejectReason; note: string | null } | null;
   requisition: { id: string; number: number; title: string };
   candidate: { id: string; code: string; name: string };
   // The CV the score was read from, and whether this user has opened it.
