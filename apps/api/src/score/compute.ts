@@ -59,7 +59,7 @@ export function formulaText(pools: Pools) {
     `experience ${pools.experience}`,
   ].filter(Boolean);
   const text = parts.join(", ");
-  return `${text.charAt(0).toUpperCase()}${text.slice(1)}. A met criterion earns its full share and a partial one half. Nothing counts without a quote found in the CV.`;
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}. A met criterion earns its full share and a partial one half. Nothing counts without a quote found in the CV. Strong match needs 75 or more and no must-have missing.`;
 }
 
 const STRONG_AT = 75;
@@ -192,9 +192,12 @@ export function computeScore(
   const mustHavesMet = criteria.filter(
     (c) => c.kind === "MUST_HAVE" && c.verdict === "MET",
   ).length;
+  const mustHavesMissing = criteria.some(
+    (c) => c.kind === "MUST_HAVE" && c.verdict === "NOT_FOUND",
+  );
 
   const band: Band =
-    total >= STRONG_AT && mustHavesMet === musts.length
+    total >= STRONG_AT && !mustHavesMissing
       ? "STRONG"
       : total >= POSSIBLE_AT
         ? "POSSIBLE"
