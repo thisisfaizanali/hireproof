@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
-  CONSTRAINT_LABEL,
   type CandidateList,
   type CandidateRow,
   type PendingDuplicate,
   type DuplicateSide,
   type ScoreResponse,
 } from "@hireproof/shared";
+import { ConstraintFlagList } from "@/components/constraint-flags";
 import { EmptyState } from "@/components/empty-state";
 import { Flag, formatPhone, notice, years } from "@/components/cv-status";
 import { CvUpload } from "@/components/cv-upload";
@@ -658,19 +658,7 @@ function Flags({ c }: { c: CandidateRow }) {
   }
   return (
     <span className="flex flex-wrap gap-1.5">
-      {c.constraintFlags.map((f) => (
-        <Flag
-          key={f.text}
-          tone={f.unknown ? "muted" : "warning"}
-          title={f.text}
-        >
-          <span aria-hidden="true">
-            {CONSTRAINT_LABEL[f.kind]}
-            {f.unknown ? " unknown" : ""}
-          </span>
-          <span className="visually-hidden">{f.text}</span>
-        </Flag>
-      ))}
+      <ConstraintFlagList flags={c.constraintFlags} />
       {c.scanned && <Flag tone="muted">Scan</Flag>}
       {c.needsReview && <Flag tone="review">Needs review</Flag>}
       {c.possibleDuplicate && <Flag tone="warning">Possible duplicate</Flag>}
