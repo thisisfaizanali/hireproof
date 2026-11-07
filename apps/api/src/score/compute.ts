@@ -150,12 +150,15 @@ export function computeScore(
   const pools = poolsFor(musts.length, nices.length);
   const experiencePool = pools.experience;
 
+  // Points are shown to one decimal but added up unrounded.
+  let earned = 0;
   const criteria: CriterionScore[] = card.criteria.map((c) => {
     const v = byId.get(c.id);
     const verdict = v?.verdict ?? "NOT_FOUND";
     const pool = c.kind === "MUST_HAVE" ? pools.mustHave : pools.niceToHave;
     const count = c.kind === "MUST_HAVE" ? musts.length : nices.length;
     const maxPoints = pool / count;
+    earned += maxPoints * SHARE[verdict];
     return {
       id: c.id,
       label: c.label,
@@ -184,7 +187,7 @@ export function computeScore(
       experienceFit(years, card.experienceMinYears, card.experienceMaxYears);
   }
 
-  const raw = criteria.reduce((sum, c) => sum + c.points, 0) + experienceRaw;
+  const raw = earned + experienceRaw;
   const total = Math.min(100, Math.max(0, Math.round(raw)));
   const mustHavesMet = criteria.filter(
     (c) => c.kind === "MUST_HAVE" && c.verdict === "MET",

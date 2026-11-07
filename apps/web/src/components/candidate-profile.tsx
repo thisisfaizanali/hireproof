@@ -15,6 +15,7 @@ import {
   notice,
   years,
 } from "@/components/cv-status";
+import { BandLabel, STAGE_LABEL } from "@/components/score";
 import { formatDate } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
@@ -24,18 +25,6 @@ const DUPLICATE_STATUS: Record<DuplicateStatus, string> = {
   PENDING: "Waiting for a recruiter",
   SAME_PERSON: "Confirmed as the same person",
   DIFFERENT_PEOPLE: "Confirmed as different people",
-};
-
-const STAGE: Record<string, string> = {
-  SOURCED: "Sourced",
-  SCREENED: "Screened",
-  SUBMITTED: "Submitted",
-  CLIENT_SHORTLISTED: "Shortlisted by client",
-  INTERVIEW: "Interview",
-  OFFERED: "Offered",
-  JOINED: "Joined",
-  REJECTED: "Rejected",
-  WITHDRAWN: "Withdrawn",
 };
 
 const lpa = (n: number | null) => (n === null ? null : `${n} LPA`);
@@ -264,7 +253,23 @@ export function CandidateProfile({ id }: { id: string }) {
                   </span>{" "}
                   <span className="font-medium">{a.requisition.title}</span>
                 </Link>
-                <span className="text-sm">{STAGE[a.stage] ?? a.stage}</span>
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                  {a.score && (
+                    <>
+                      <span className="num">{a.score.total}</span>
+                      <BandLabel band={a.score.band} />
+                    </>
+                  )}
+                  <span>{STAGE_LABEL[a.stage] ?? a.stage}</span>
+                  {a.cvId && (
+                    <Link
+                      href={`/candidates/${c.id}/cv/${a.cvId}?requisition=${a.requisition.id}`}
+                      className="underline underline-offset-4 hover:no-underline"
+                    >
+                      Open the CV
+                    </Link>
+                  )}
+                </span>
               </li>
             ))}
           </ul>
