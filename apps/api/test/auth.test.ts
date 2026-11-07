@@ -96,8 +96,10 @@ describe("POST /api/auth/login", () => {
       "LOGIN_FAILED",
       "LOGIN_SUCCEEDED",
     ]);
-    // The trail never holds an email address.
-    expect(events[0].meta).toEqual({ knownUser: true });
+    // The trail names the account by id and never holds an email address.
+    expect(events[0].entityType).toBe("User");
+    expect(events[0].entityId).toBe(user.id);
+    expect(events[0].actorId).toBeNull();
     expect(JSON.stringify(events[0])).not.toContain(user.email);
     expect(JSON.stringify(events[0])).not.toContain("wrong-password");
     expect(events[1].actorId).toBe(user.id);

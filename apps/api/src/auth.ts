@@ -106,9 +106,10 @@ auth.post("/api/auth/login", loginLimiter, async (req, res) => {
   );
 
   if (!user || !passwordOk) {
+    // The account is stored as an id, never the email that was typed.
     await audit({
       action: "LOGIN_FAILED",
-      meta: { knownUser: user !== null },
+      ...(user && { entityType: "User", entityId: user.id }),
       ip: req.ip,
     });
     res.status(401).json({ error: BAD_LOGIN });

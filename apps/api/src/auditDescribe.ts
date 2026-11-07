@@ -17,6 +17,9 @@ export interface Described {
   // Resolved from ids by the caller: CND-10137 and REQ-0009.
   candidate: string | null;
   requisition: string | null;
+  // The user an event is about when that is not the actor: a failed sign-in
+  // has no actor, but names the account that was tried.
+  target?: string | null;
 }
 
 const text = (v: unknown) => (typeof v === "string" ? v : "");
@@ -48,7 +51,10 @@ type Case = (d: Described, who: string, cand: string, req: string) => string;
 
 const CASES: Record<AuditAction, Case> = {
   LOGIN_SUCCEEDED: (_d, who) => `${who} signed in`,
-  LOGIN_FAILED: () => "A sign in failed",
+  LOGIN_FAILED: (d) =>
+    d.target
+      ? `Failed sign-in to ${d.target}'s account`
+      : "Failed sign-in with an unknown email",
   LOGOUT: (_d, who) => `${who} signed out`,
   REQUISITION_CREATED: (_d, who, _c, req) => `${who} created ${req}`,
   REQUISITION_STATUS_CHANGED: (d, who, _c, req) =>
