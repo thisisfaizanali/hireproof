@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DEMO_USERS, LoginInput, SessionUser } from "@hireproof/shared";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
@@ -16,6 +16,39 @@ const UNREACHABLE =
   "Cannot reach the server. Check your connection and try again.";
 const SERVER_ERROR = "Something went wrong on our side. Try again in a moment.";
 
+const STARTING =
+  "The server is still starting. Wait a few seconds, then sign in again.";
+const WAKING_NOTE =
+  "Starting the server. The first load after a quiet spell can take up to a minute.";
+
+// Asks the API if it is awake. The line only shows when the answer takes more
+// than two seconds, so a warm server never flashes it.
+function useServerWaking() {
+  const [waking, setWaking] = useState(false);
+  useEffect(() => {
+    let stopped = false;
+    const timer = setTimeout(() => setWaking(true), 2000);
+    void (async () => {
+      while (!stopped) {
+        try {
+          const res = await fetch("/api/health", { cache: "no-store" });
+          if (res.ok) break;
+        } catch {
+          // Not reachable yet; ask again.
+        }
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+      clearTimeout(timer);
+      if (!stopped) setWaking(false);
+    })();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, []);
+  return waking;
+}
+
 type FieldErrors = { email?: string; password?: string };
 
 export function LoginForm() {
@@ -27,6 +60,7 @@ export function LoginForm() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const waking = useServerWaking();
 
   async function signIn(values: { email: string; password: string }) {
     setFormError(null);
@@ -59,11 +93,13 @@ export function LoginForm() {
       }
       // The web server answers with a bodyless error when the API is down.
       setFormError(
-        body === null
-          ? UNREACHABLE
-          : res.status >= 500
-            ? SERVER_ERROR
-            : (body.error ?? SERVER_ERROR),
+        [502, 503, 504].includes(res.status)
+          ? STARTING
+          : body === null
+            ? UNREACHABLE
+            : res.status >= 500
+              ? SERVER_ERROR
+              : (body.error ?? SERVER_ERROR),
       );
     } catch {
       setFormError(UNREACHABLE);
@@ -87,6 +123,11 @@ export function LoginForm() {
     >
       <section aria-labelledby="signin-title" className="flex flex-col gap-6">
         <h1 id="signin-title">Sign in</h1>
+        {waking && (
+          <p role="status" className="text-sm text-muted-foreground">
+            {WAKING_NOTE}
+          </p>
+        )}
         <form
           noValidate
           className="flex flex-col gap-5"

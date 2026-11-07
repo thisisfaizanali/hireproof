@@ -229,6 +229,9 @@ describe("consent", () => {
     });
     const res = await send(batch.id, [pdf()]);
     expect(res.status).toBe(409);
+    expect(res.body.error).toBe(
+      "This upload was started before consent was recorded. Start a new upload.",
+    );
     expect(await prisma.cvDocument.count()).toBe(0);
   });
 });

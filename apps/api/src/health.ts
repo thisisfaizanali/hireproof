@@ -14,10 +14,15 @@ async function dbIsUp(): Promise<boolean> {
 export const health = Router();
 
 health.get("/api/health", async (_req, res) => {
+  const up = await dbIsUp();
   const body: HealthResponse = {
     status: "ok",
-    db: (await dbIsUp()) ? "up" : "down",
+    db: up ? "up" : "down",
     time: new Date().toISOString(),
   };
-  res.json(body);
+  // A 503 tells the host not to send traffic here while the database is out.
+  res
+    .status(up ? 200 : 503)
+    .set("Cache-Control", "no-store")
+    .json(body);
 });

@@ -17,7 +17,11 @@ export async function resetDb() {
   await prisma.$executeRaw`TRUNCATE "AuditEvent", "Session", "User", "Client", "Candidate" CASCADE`;
 }
 
-export async function createUser(role: Role, password?: string) {
+export async function createUser(
+  role: Role,
+  password?: string,
+  email = `${role.toLowerCase()}@example.test`,
+) {
   const client =
     role === "CLIENT_HM"
       ? await prisma.client.create({
@@ -26,7 +30,7 @@ export async function createUser(role: Role, password?: string) {
       : null;
   return prisma.user.create({
     data: {
-      email: `${role.toLowerCase()}@example.test`,
+      email,
       name: "Test User",
       role,
       passwordHash: password ? hash(password) : passwordHash,

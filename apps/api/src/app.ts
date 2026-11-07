@@ -21,7 +21,8 @@ export const app = express();
 
 app.disable("x-powered-by");
 // The web app proxies /api, so the client address arrives in X-Forwarded-For.
-app.set("trust proxy", 1);
+// docs/deployment.md explains the value to use behind Vercel and Render.
+app.set("trust proxy", env.TRUST_PROXY);
 app.use(helmet());
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());

@@ -160,7 +160,8 @@ uploads.post(
     }
     if (!batch.consentSource || !batch.consentAt) {
       res.status(409).json({
-        error: "This upload has no consent recorded. Start a new upload.",
+        error:
+          "This upload was started before consent was recorded. Start a new upload.",
       });
       return;
     }

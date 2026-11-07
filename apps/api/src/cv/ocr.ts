@@ -2,11 +2,12 @@ import { createRequire } from "node:module";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { createScheduler, createWorker, type Scheduler } from "tesseract.js";
 import { getDocumentProxy, renderPageAsImage } from "unpdf";
+import { env } from "../env";
 
 // A text layer thinner than this per page means the PDF is a scan (or close to one).
 const MIN_CHARS_PER_PAGE = 100;
 const OCR_PAGES = 3;
-const WORKERS = 2;
+const WORKERS = env.CV_CONCURRENCY;
 // Pages are drawn at this multiple of their PDF size. Higher is not better:
 // scanner speckle grows with the image and the denoise step stops catching it.
 const RENDER_SCALE = 2;

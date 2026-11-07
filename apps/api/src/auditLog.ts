@@ -226,6 +226,10 @@ auditLog.get(
           meta: e.m,
           candidate: code,
           requisition: number === undefined ? null : formatReqNumber(number),
+          target:
+            e.entityType === "User" && e.entityId
+              ? (nameById.get(e.entityId) ?? null)
+              : null,
         }),
         ip: e.ip,
       };

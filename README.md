@@ -6,7 +6,7 @@ This repository holds the foundation (sign-in, role-based shells, API, shared sc
 
 ## Prerequisites
 
-- Node 24 (see `.nvmrc`) and npm
+- Node 26 (see `.nvmrc`) and npm
 - Docker, for the local Postgres database
 
 ## Local setup
@@ -47,6 +47,18 @@ npm run dev
 If port 5432 is already in use on your machine, set `POSTGRES_PORT` in `.env` and use the same port in `DATABASE_URL`.
 
 The web app runs on http://localhost:3000 and the API on http://localhost:4000. The browser only talks to the web origin, which proxies `/api` to the API, so the session cookie is first-party.
+
+## Run everything in Docker
+
+Without installing Node, run Postgres, the API and a production build of the web app:
+
+```bash
+docker compose --profile app up --build
+```
+
+The web app is on http://localhost:3000 (`WEB_PORT`) and the API on http://localhost:4000 (`API_PORT`). The database starts empty, so load the demo data from your machine with `npm run db:seed` (the steps are in `docs/deployment.md`). The API runs in a 512 MB container, the size of the hosted free instance. Use Chrome, Edge or Firefox, because the session cookie is marked secure.
+
+The hosted setup (Neon, Render, Vercel), the smoke test (`npm run smoke -- --web <url>`) and what to check after deploying are in [docs/deployment.md](docs/deployment.md).
 
 ## AI configuration
 
@@ -169,6 +181,10 @@ These are for the delivery head. A recruiter or a hiring manager gets 403 from e
 **Retention.** A candidate is kept 12 months from their last CV upload or stage change (`Candidate.lastActivityAt`). The Data page lists those past it. Nothing is deleted automatically; a scheduled job that does it is left for deployment.
 
 **Erasure.** From the profile the delivery head chooses a reason (candidate request, retention period ended, uploaded by mistake) and types the candidate code. One transaction removes the CVs and files, parsed profile, scores, applications, interview times, messages, consent records and duplicate links, writes a `DeletionRecord` (code, reason, who, when and counts) and audits `CANDIDATE_DELETED`. Earlier audit events stay; they hold ids and codes only. A client who had the candidate no longer sees them. Queued parse and score jobs hold only ids, so a job for erased data finds nothing and stops, and a job already running checks that its rows still exist before it writes. A test searches every text, varchar and jsonb column of every table, read from `information_schema`, for the erased candidate's name, email and phone.
+
+## Security notes
+
+Failed sign-ins are limited twice: 10 per address and 5 per account (email) in 15 minutes, so forging the client address cannot be used to guess a password. Successful sign-ins do not count.
 
 ## Demo accounts
 

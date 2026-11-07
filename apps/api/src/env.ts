@@ -18,9 +18,21 @@ const Env = z.object({
   LLM_MODEL: z.preprocess(blankAsUnset, z.string().optional()),
   // Model for reading CVs; falls back to LLM_MODEL.
   LLM_PARSE_MODEL: z.preprocess(blankAsUnset, z.string().optional()),
+  // How many proxies sit between the browser and this process. Express reads the
+  // client address that many entries from the right of X-Forwarded-For.
+  TRUST_PROXY: z.preprocess(
+    blankAsUnset,
+    z.coerce.number().int().min(0).max(10).default(1),
+  ),
+  // CVs read (text, OCR, parse) at the same time. Each OCR worker holds a
+  // few hundred MB, so a 512 MB host should use 1.
+  CV_CONCURRENCY: z.preprocess(
+    blankAsUnset,
+    z.coerce.number().int().min(1).max(8).default(2),
+  ),
 });
 
-function loadEnv(source: NodeJS.ProcessEnv = process.env) {
+export function loadEnv(source: NodeJS.ProcessEnv = process.env) {
   const result = Env.safeParse(source);
   if (!result.success) {
     const lines = result.error.issues.map(

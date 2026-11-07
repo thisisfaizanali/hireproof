@@ -85,6 +85,17 @@ describe("describing events", () => {
     ).toBe("Ananya Sharma opened the CV of CND-10137 for REQ-0009");
   });
 
+  it("names the account on a failed sign-in, or says the email is unknown", () => {
+    const failed = { action: "LOGIN_FAILED", person: null, meta: {} };
+    const none = { candidate: null, requisition: null };
+    expect(sentence({ ...failed, ...none, target: "Ananya Sharma" })).toBe(
+      "Failed sign-in to Ananya Sharma's account",
+    );
+    expect(sentence({ ...failed, ...none })).toBe(
+      "Failed sign-in with an unknown email",
+    );
+  });
+
   it("says so when the candidate has been deleted", () => {
     expect(
       sentence({
@@ -310,6 +321,22 @@ describe("the audit log", () => {
     });
     expect(page.total).toBe(2);
     expect(page.people.map((p) => p.name)).toContain("Test DELIVERY_HEAD");
+  });
+
+  it("names the account of a failed sign-in without the email", async () => {
+    await request(app)
+      .post("/api/auth/login")
+      .send({ email: recruiter.user.email, password: "wrong-password" });
+    await request(app).post("/api/auth/login").send({
+      email: "nobody.at.all@example.test",
+      password: "wrong-password",
+    });
+    const page = await log("?action=LOGIN_FAILED");
+    expect(page.rows.map((r) => r.sentence).sort()).toEqual([
+      "Failed sign-in to Test RECRUITER's account",
+      "Failed sign-in with an unknown email",
+    ]);
+    expect(JSON.stringify(page)).not.toContain(recruiter.user.email);
   });
 
   it("pages 50 at a time", async () => {

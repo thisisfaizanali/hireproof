@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { Router, type CookieOptions, type RequestHandler } from "express";
-import { rateLimit } from "express-rate-limit";
+import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { LoginInput, type Role, type SessionUser } from "@hireproof/shared";
 import { audit } from "./audit";
 import { prisma } from "./db";
@@ -76,6 +76,10 @@ export const requireRole =
     next();
   };
 
+const TOO_MANY = {
+  error: "Too many failed attempts. Try again in a few minutes.",
+};
+
 // Only failed attempts count, so a shared office IP is not locked out by normal use.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -83,12 +87,28 @@ const loginLimiter = rateLimit({
   skipSuccessfulRequests: true,
   standardHeaders: "draft-8",
   legacyHeaders: false,
-  message: { error: "Too many failed attempts. Try again in a few minutes." },
+  message: TOO_MANY,
+});
+
+// The address can be forged by anyone who reaches the API without going through
+// the web app, so guessing is also capped per account. A missing or invalid email
+// falls back to the address.
+const accountLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  skipSuccessfulRequests: true,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: TOO_MANY,
+  keyGenerator: (req) => {
+    const email = LoginInput.shape.email.safeParse(req.body?.email);
+    return email.success ? `email:${email.data}` : ipKeyGenerator(req.ip ?? "");
+  },
 });
 
 export const auth = Router();
 
-auth.post("/api/auth/login", loginLimiter, async (req, res) => {
+auth.post("/api/auth/login", loginLimiter, accountLimiter, async (req, res) => {
   const input = LoginInput.safeParse(req.body);
   if (!input.success) {
     res.status(400).json({ error: "Enter a valid email and password" });
@@ -106,9 +126,10 @@ auth.post("/api/auth/login", loginLimiter, async (req, res) => {
   );
 
   if (!user || !passwordOk) {
+    // The account is stored as an id, never the email that was typed.
     await audit({
       action: "LOGIN_FAILED",
-      meta: { knownUser: user !== null },
+      ...(user && { entityType: "User", entityId: user.id }),
       ip: req.ip,
     });
     res.status(401).json({ error: BAD_LOGIN });
