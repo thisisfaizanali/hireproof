@@ -79,10 +79,12 @@ export async function processScore(
     if (done) return;
   }
 
-  await prisma.application.update({
+  const started = await prisma.application.updateMany({
     where: { id: applicationId },
     data: { scoringStartedAt: new Date() },
   });
+  // Erased since it was read.
+  if (started.count === 0) return;
   try {
     const criteria = card.criteria.map((c) => ({
       id: c.id,
@@ -121,6 +123,11 @@ export async function processScore(
           },
         });
       }
+      // The candidate may have been erased while the model worked.
+      const alive = await tx.application.count({
+        where: { id: applicationId },
+      });
+      if (alive === 0) return false;
       // The scorecard may have been confirmed again while the model worked.
       // A score for an old version is never stored; the new version has its
       // own job.

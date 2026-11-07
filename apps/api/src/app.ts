@@ -5,6 +5,7 @@ import { applications } from "./applications";
 import { auth } from "./auth";
 import { candidates } from "./candidates";
 import { clients } from "./clients";
+import { data } from "./data";
 import { cvView } from "./cvView";
 import { env } from "./env";
 import { health } from "./health";
@@ -60,6 +61,7 @@ app.use(pipeline);
 app.use(cvView);
 app.use(portal);
 app.use(portalActions);
+app.use(data);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
