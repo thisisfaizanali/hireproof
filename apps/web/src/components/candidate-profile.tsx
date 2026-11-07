@@ -8,6 +8,7 @@ import {
   type CandidateDetail,
   type DuplicateStatus,
 } from "@hireproof/shared";
+import { DeleteCandidate } from "@/components/delete-candidate";
 import { EmptyState } from "@/components/empty-state";
 import {
   CvStatusLabel,
@@ -35,7 +36,13 @@ type Load =
   | { state: "error"; message: string; notFound: boolean }
   | { state: "ready"; data: CandidateDetail };
 
-export function CandidateProfile({ id }: { id: string }) {
+export function CandidateProfile({
+  id,
+  canDelete,
+}: {
+  id: string;
+  canDelete: boolean;
+}) {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [attempt, setAttempt] = useState(0);
 
@@ -134,6 +141,11 @@ export function CandidateProfile({ id }: { id: string }) {
         <p className="text-muted-foreground">
           {c.currentRole ?? "Current role not stated"}
         </p>
+        {canDelete && (
+          <div className="mt-1">
+            <DeleteCandidate id={c.id} code={c.code} />
+          </div>
+        )}
       </header>
 
       {reviewCvs.length > 0 && (
