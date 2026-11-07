@@ -48,6 +48,18 @@ If port 5432 is already in use on your machine, set `POSTGRES_PORT` in `.env` an
 
 The web app runs on http://localhost:3000 and the API on http://localhost:4000. The browser only talks to the web origin, which proxies `/api` to the API, so the session cookie is first-party.
 
+## Run everything in Docker
+
+Without installing Node, run Postgres, the API and a production build of the web app:
+
+```bash
+docker compose --profile app up --build
+```
+
+The web app is on http://localhost:3000 (`WEB_PORT`) and the API on http://localhost:4000 (`API_PORT`). The database starts empty, so load the demo data from your machine with `npm run db:seed` (the steps are in `docs/deployment.md`). The API runs in a 512 MB container, the size of the hosted free instance. Use Chrome, Edge or Firefox, because the session cookie is marked secure.
+
+The hosted setup (Neon, Render, Vercel), the smoke test (`npm run smoke -- --web <url>`) and what to check after deploying are in [docs/deployment.md](docs/deployment.md).
+
 ## AI configuration
 
 Scorecard extraction and CV parsing use an OpenAI-compatible chat API. All the variables are optional; set them in `.env` only, never in code or tests.
