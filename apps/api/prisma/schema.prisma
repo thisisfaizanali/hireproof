@@ -48,6 +48,9 @@ model User {
   submittedApplications Application[]     @relation("submitter")
   proposedSlots         InterviewSlot[]
   outboundMessages      OutboundMessage[]
+  consentRecords        ConsentRecord[]
+  deletionRecords       DeletionRecord[]
+  sampleReviews         SampleReview[]
 }
 
 model Session {
@@ -72,6 +75,8 @@ model AuditEvent {
 
   @@index([entityType, entityId])
   @@index([createdAt])
+  @@index([action, createdAt])
+  @@index([actorId, createdAt])
 }
 
 enum RequisitionStatus {
@@ -252,23 +257,31 @@ model Candidate {
   expectedCtcLpa       Decimal?        @db.Decimal(6, 2)
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
+  // A CV upload or a stage change. Retention runs 12 months from here.
+  lastActivityAt       DateTime        @default(now())
   cvs                  CvDocument[]
   applications         Application[]
   duplicateLinks       DuplicateLink[]
+  consents             ConsentRecord[]
 
   @@index([email])
   @@index([phone])
+  @@index([lastActivityAt])
 }
 
 model UploadBatch {
-  id            String       @id @default(cuid())
-  requisitionId String
-  requisition   Requisition  @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
-  uploadedById  String
-  uploadedBy    User         @relation(fields: [uploadedById], references: [id])
-  expectedCount Int
-  createdAt     DateTime     @default(now())
-  cvs           CvDocument[]
+  id                String         @id @default(cuid())
+  requisitionId     String
+  requisition       Requisition    @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  uploadedById      String
+  uploadedBy        User           @relation(fields: [uploadedById], references: [id])
+  expectedCount     Int
+  // Attested once for the batch. Null on batches from before consent was recorded.
+  consentSource     ConsentSource?
+  consentSourceNote String?
+  consentAt         DateTime?
+  createdAt         DateTime       @default(now())
+  cvs               CvDocument[]
 
   @@index([requisitionId, createdAt])
 }
@@ -301,6 +314,7 @@ model CvDocument {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   duplicateLinks DuplicateLink[]
+  consent        ConsentRecord?
 
   @@index([sha256])
   @@index([batchId])
@@ -393,6 +407,7 @@ model Application {
   scores             CandidateScore[]
   slots              InterviewSlot[]
   messages           OutboundMessage[]
+  sampleReviews      SampleReview[]
 
   @@unique([candidateId, requisitionId])
   @@index([requisitionId, createdAt])
@@ -471,4 +486,81 @@ model OutboundMessage {
   createdAt     DateTime         @default(now())
 
   @@index([applicationId])
+}
+
+enum ConsentBasis {
+  APPLIED_OR_AGREED
+}
+
+enum ConsentSource {
+  JOB_PORTAL
+  REFERRAL
+  DIRECT_APPLICATION
+  AGENCY_DATABASE
+  OTHER
+}
+
+// Why the firm holds a CV, attested by the recruiter who uploaded it.
+model ConsentRecord {
+  id            String        @id @default(cuid())
+  cvId          String        @unique
+  cv            CvDocument    @relation(fields: [cvId], references: [id], onDelete: Cascade)
+  candidateId   String?
+  candidate     Candidate?    @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+  basis         ConsentBasis
+  source        ConsentSource
+  sourceNote    String?
+  attestedById  String
+  attestedBy    User          @relation(fields: [attestedById], references: [id])
+  attestedAt    DateTime
+  noticeVersion String
+
+  @@index([candidateId])
+}
+
+enum DeletionReason {
+  CANDIDATE_REQUEST
+  RETENTION_ENDED
+  UPLOADED_BY_MISTAKE
+}
+
+// What was erased and why. Holds the candidate code and counts, never a name,
+// an email, a phone number or any CV text.
+model DeletionRecord {
+  id            String         @id @default(cuid())
+  candidateCode String
+  reason        DeletionReason
+  deletedById   String
+  deletedBy     User           @relation(fields: [deletedById], references: [id])
+  deletedAt     DateTime       @default(now())
+  counts        Json
+
+  @@index([deletedAt])
+}
+
+enum SampleVerdict {
+  AI_RIGHT
+  RECRUITER_RIGHT
+  BOTH_REASONABLE
+}
+
+// The delivery head's verdict on one decision in the weekly sample. The band,
+// decision and requisition number are copied so the verdict survives the
+// application being deleted.
+model SampleReview {
+  id                String        @id @default(cuid())
+  weekStart         DateTime      @db.Date
+  applicationId     String?
+  application       Application?  @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  verdict           SampleVerdict
+  note              String?
+  reviewedById      String
+  reviewedBy        User          @relation(fields: [reviewedById], references: [id])
+  reviewedAt        DateTime      @default(now())
+  band              ScoreBand?
+  decision          String
+  requisitionNumber Int
+
+  @@unique([weekStart, applicationId])
+  @@index([weekStart])
 }
