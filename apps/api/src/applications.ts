@@ -2,12 +2,15 @@ import { Router, type Response } from "express";
 import {
   RejectInput,
   SCREEN_GATE_MESSAGE,
+  SubmitInput,
+  canMove,
   type ApplicationInfo,
   type ScoreResponse,
 } from "@hireproof/shared";
 import { audit } from "./audit";
 import { requireAuth, requireRole } from "./auth";
 import { prisma } from "./db";
+import { badInput } from "./http";
 import { currentCv } from "./score/job";
 import { queueScoring } from "./score/trigger";
 import { pendingState, toDetail } from "./score/view";
@@ -19,7 +22,7 @@ const readers = [requireAuth, requireRole("RECRUITER", "DELIVERY_HEAD")];
 
 const IN_FLIGHT = ["QUEUED", "EXTRACTING", "OCR", "PARSING"];
 
-const load = (id: string) =>
+export const load = (id: string) =>
   prisma.application.findUnique({
     where: { id },
     include: {
@@ -60,7 +63,7 @@ const liveScore = (app: Loaded) => {
 
 // The AI's view of this candidate when a recruiter decides, kept on the audit
 // event so it can later be set beside what the recruiter chose.
-const bandAtDecision = (app: Loaded) => {
+export const bandAtDecision = (app: Loaded) => {
   const score =
     liveScore(app) ??
     [...app.scores].sort(
@@ -198,6 +201,7 @@ applications.post(
       where: { id: app.id, stage: { in: ["SOURCED", "SCREENED"] } },
       data: {
         stage: "REJECTED",
+        rejectedBy: "RECRUITER",
         rejectReason: reason,
         rejectNote: note || null,
         decidedById: req.user!.id,
@@ -228,9 +232,10 @@ applications.post(
     const app = await load(String(req.params.id));
     if (!app) return notFound(res);
     const moved = await prisma.application.updateMany({
-      where: { id: app.id, stage: "REJECTED" },
+      where: { id: app.id, stage: "REJECTED", submittedAt: null },
       data: {
         stage: "SOURCED",
+        rejectedBy: null,
         rejectReason: null,
         rejectNote: null,
         decidedById: req.user!.id,
@@ -238,9 +243,10 @@ applications.post(
       },
     });
     if (moved.count === 0) {
-      res
-        .status(409)
-        .json({ error: "Only a rejected candidate can be reopened." });
+      res.status(409).json({
+        error:
+          "Only a candidate you rejected before submitting can be reopened.",
+      });
       return;
     }
     await audit({
@@ -267,5 +273,74 @@ applications.post(
     }
     await queueScoring([app.id], true);
     res.status(202).json({ ok: true });
+  },
+);
+
+// The recruiter's case for a candidate goes to the client with the stage change.
+applications.post(
+  "/api/applications/:id/submit",
+  ...recruiterOnly,
+  async (req, res) => {
+    const input = SubmitInput.safeParse(req.body);
+    if (!input.success) return badInput(res, input.error);
+    const app = await load(String(req.params.id));
+    if (!app) return notFound(res);
+    if (!canMove(app.stage, "SUBMITTED", "RECRUITER")) {
+      res.status(409).json({
+        error: "Only a screened candidate can be submitted to the client.",
+      });
+      return;
+    }
+    const moved = await prisma.application.updateMany({
+      where: { id: app.id, stage: "SCREENED" },
+      data: {
+        stage: "SUBMITTED",
+        submittedAt: new Date(),
+        submittedById: req.user!.id,
+        submissionNote: input.data.note,
+      },
+    });
+    if (moved.count === 0) {
+      res.status(409).json({ error: "This candidate was already moved." });
+      return;
+    }
+    await audit({
+      action: "APPLICATION_SUBMITTED",
+      actorId: req.user!.id,
+      entityType: "Application",
+      entityId: app.id,
+      meta: { ...bandAtDecision(app), noteLength: input.data.note.length },
+      ip: req.ip,
+    });
+    res.json({ ok: true });
+  },
+);
+
+// Only until the client has acted on it.
+applications.post(
+  "/api/applications/:id/withdraw",
+  ...recruiterOnly,
+  async (req, res) => {
+    const app = await load(String(req.params.id));
+    if (!app) return notFound(res);
+    const moved = await prisma.application.updateMany({
+      where: { id: app.id, stage: "SUBMITTED" },
+      data: { stage: "WITHDRAWN" },
+    });
+    if (moved.count === 0) {
+      res.status(409).json({
+        error:
+          "Only a submission the client has not acted on can be withdrawn.",
+      });
+      return;
+    }
+    await audit({
+      action: "SUBMISSION_WITHDRAWN",
+      actorId: req.user!.id,
+      entityType: "Application",
+      entityId: app.id,
+      ip: req.ip,
+    });
+    res.json({ ok: true });
   },
 );

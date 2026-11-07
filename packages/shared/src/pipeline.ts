@@ -315,3 +315,15 @@ export interface PortalApplication extends PortalCandidateRow {
   criteria: PortalCriterion[];
   cvText: string | null;
 }
+
+export const STAGE_NAME: Record<Stage, string> = {
+  SOURCED: "sourced",
+  SCREENED: "screened",
+  SUBMITTED: "submitted",
+  CLIENT_SHORTLISTED: "shortlisted by the client",
+  INTERVIEW: "at interview",
+  OFFERED: "offered",
+  JOINED: "joined",
+  REJECTED: "rejected",
+  WITHDRAWN: "withdrawn",
+};
