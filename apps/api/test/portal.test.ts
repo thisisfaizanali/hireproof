@@ -265,6 +265,7 @@ describe("access by role", () => {
     for (const path of [
       `/api/applications/${application.id}/submit`,
       `/api/applications/${application.id}/withdraw`,
+      `/api/applications/${application.id}/move`,
       `/api/applications/${application.id}/screen`,
     ]) {
       expect(
