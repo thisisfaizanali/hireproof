@@ -2,6 +2,9 @@ generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
   moduleFormat = "cjs"
+  // Without this Prisma reads tsconfig.json to choose the extension, and falls
+  // back to ".ts" when it is not there yet, as in a Docker install step.
+  importFileExtension = "js"
 }
 
 datasource db {

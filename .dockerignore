@@ -22,3 +22,4 @@ docs
 *.md
 Dockerfile*
 docker-compose*.yml
+apps/api/src/generated
