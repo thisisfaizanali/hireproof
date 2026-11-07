@@ -85,11 +85,9 @@ cvView.get("/api/cvs/:id/text", ...readers, async (req, res) => {
     },
   });
   if (row.text === null) {
-    res
-      .status(404)
-      .json({
-        error: "No text could be read from this file. Open the original.",
-      });
+    res.status(404).json({
+      error: "No text could be read from this file. Open the original.",
+    });
     return;
   }
   const body: CvText = {

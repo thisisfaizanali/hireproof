@@ -13,9 +13,7 @@
           {
             "label": "Java",
             "verdict": "MET",
-            "quotes": [
-              "Senior Java Developer with 6.5 years of experience"
-            ]
+            "quotes": ["Senior Java Developer with 6.5 years of experience"]
           },
           {
             "label": "Spring Boot",
@@ -58,9 +56,7 @@
           {
             "label": "Docker",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Docker"
-            ]
+            "quotes": ["Docker"]
           }
         ]
       },
@@ -74,9 +70,7 @@
           {
             "label": "Java",
             "verdict": "MET",
-            "quotes": [
-              "Senior Java Developer with 6.5 years of experience"
-            ]
+            "quotes": ["Senior Java Developer with 6.5 years of experience"]
           },
           {
             "label": "Spring Boot",
@@ -88,9 +82,7 @@
           {
             "label": "Microservices",
             "verdict": "MET",
-            "quotes": [
-              "Designed event driven flows between six microservices"
-            ]
+            "quotes": ["Designed event driven flows between six microservices"]
           },
           {
             "label": "REST API design and development",
@@ -102,9 +94,7 @@
           {
             "label": "SQL",
             "verdict": "PARTIAL",
-            "quotes": [
-              "MySQL, PostgreSQL"
-            ]
+            "quotes": ["MySQL, PostgreSQL"]
           },
           {
             "label": "Kafka",
@@ -121,9 +111,7 @@
           {
             "label": "Docker",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Docker"
-            ]
+            "quotes": ["Docker"]
           }
         ]
       },
@@ -156,16 +144,12 @@
           {
             "label": "REST API design and development",
             "verdict": "MET",
-            "quotes": [
-              "Wrote REST APIs for cart, order and invoice modules."
-            ]
+            "quotes": ["Wrote REST APIs for cart, order and invoice modules."]
           },
           {
             "label": "SQL",
             "verdict": "PARTIAL",
-            "quotes": [
-              "MySQL"
-            ]
+            "quotes": ["MySQL"]
           },
           {
             "label": "Kafka",
@@ -194,9 +178,7 @@
           {
             "label": "Java",
             "verdict": "MET",
-            "quotes": [
-              "Solution Architect, Enterprise Java and Cloud"
-            ]
+            "quotes": ["Solution Architect, Enterprise Java and Cloud"]
           },
           {
             "label": "Spring Boot",
@@ -243,9 +225,7 @@
           {
             "label": "Docker",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Docker"
-            ]
+            "quotes": ["Docker"]
           }
         ]
       },
@@ -259,9 +239,7 @@
           {
             "label": "Java",
             "verdict": "MET",
-            "quotes": [
-              "Used Java in the first year and for older modules."
-            ]
+            "quotes": ["Used Java in the first year and for older modules."]
           },
           {
             "label": "Spring Boot",
@@ -312,9 +290,7 @@
           {
             "label": "Java",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Java (basic)"
-            ]
+            "quotes": ["Java (basic)"]
           },
           {
             "label": "Spring Boot",
@@ -336,9 +312,7 @@
           {
             "label": "SQL",
             "verdict": "MET",
-            "quotes": [
-              "Wrote SQL Server stored procedures and SSRS reports."
-            ]
+            "quotes": ["Wrote SQL Server stored procedures and SSRS reports."]
           },
           {
             "label": "Kafka",
@@ -367,16 +341,12 @@
           {
             "label": "Java",
             "verdict": "MET",
-            "quotes": [
-              "Library Management System (Java, Swing, MySQL)"
-            ]
+            "quotes": ["Library Management System (Java, Swing, MySQL)"]
           },
           {
             "label": "Spring Boot",
             "verdict": "MET",
-            "quotes": [
-              "Spring Boot Expense Tracker"
-            ]
+            "quotes": ["Spring Boot Expense Tracker"]
           },
           {
             "label": "Microservices",
@@ -393,9 +363,7 @@
           {
             "label": "SQL",
             "verdict": "MET",
-            "quotes": [
-              "Library Management System (Java, Swing, MySQL)"
-            ]
+            "quotes": ["Library Management System (Java, Swing, MySQL)"]
           },
           {
             "label": "Kafka",
@@ -452,9 +420,7 @@
           {
             "label": "SQL",
             "verdict": "PARTIAL",
-            "quotes": [
-              "SQL"
-            ]
+            "quotes": ["SQL"]
           },
           {
             "label": "Kafka",
@@ -483,16 +449,12 @@
           {
             "label": "Java",
             "verdict": "MET",
-            "quotes": [
-              "Senior Java Developer"
-            ]
+            "quotes": ["Senior Java Developer"]
           },
           {
             "label": "Spring Boot",
             "verdict": "MET",
-            "quotes": [
-              "Developed SpringBoot services for a lending app"
-            ]
+            "quotes": ["Developed SpringBoot services for a lending app"]
           },
           {
             "label": "Microservices",
@@ -511,16 +473,12 @@
           {
             "label": "SQL",
             "verdict": "MET",
-            "quotes": [
-              "MySQL"
-            ]
+            "quotes": ["MySQL"]
           },
           {
             "label": "Kafka",
             "verdict": "MET",
-            "quotes": [
-              "Used Kafka for transaction events"
-            ]
+            "quotes": ["Used Kafka for transaction events"]
           },
           {
             "label": "AWS",
@@ -530,9 +488,7 @@
           {
             "label": "Docker",
             "verdict": "MET",
-            "quotes": [
-              "Docker for local and test environments"
-            ]
+            "quotes": ["Docker for local and test environments"]
           }
         ]
       },
@@ -546,9 +502,7 @@
           {
             "label": "Java",
             "verdict": "MET",
-            "quotes": [
-              "Backend Engineer, Java and Spring Boot"
-            ]
+            "quotes": ["Backend Engineer, Java and Spring Boot"]
           },
           {
             "label": "Spring Boot",
@@ -574,9 +528,7 @@
           {
             "label": "SQL",
             "verdict": "MET",
-            "quotes": [
-              "PostgreSQL"
-            ]
+            "quotes": ["PostgreSQL"]
           },
           {
             "label": "Kafka",
@@ -591,9 +543,7 @@
           {
             "label": "Docker",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Docker"
-            ]
+            "quotes": ["Docker"]
           }
         ]
       },
@@ -631,9 +581,7 @@
           {
             "label": "SQL",
             "verdict": "MET",
-            "quotes": [
-              "Wrote SQL queries for reports requested by the client."
-            ]
+            "quotes": ["Wrote SQL queries for reports requested by the client."]
           },
           {
             "label": "Kafka",
@@ -697,23 +645,17 @@
           {
             "label": "Kafka",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Kafka / RabbitMQ /"
-            ]
+            "quotes": ["Kafka / RabbitMQ /"]
           },
           {
             "label": "AWS",
             "verdict": "PARTIAL",
-            "quotes": [
-              "AWS / Azure / GCP /"
-            ]
+            "quotes": ["AWS / Azure / GCP /"]
           },
           {
             "label": "Docker",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Docker / Kubernetes / Terraform /"
-            ]
+            "quotes": ["Docker / Kubernetes / Terraform /"]
           }
         ]
       },
@@ -727,9 +669,7 @@
           {
             "label": "Java",
             "verdict": "MET",
-            "quotes": [
-              "Senior Java Developer, Naradaa Systems, Noida"
-            ]
+            "quotes": ["Senior Java Developer, Naradaa Systems, Noida"]
           },
           {
             "label": "Spring Boot",
@@ -762,23 +702,17 @@
           {
             "label": "Kafka",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Kafka"
-            ]
+            "quotes": ["Kafka"]
           },
           {
             "label": "AWS",
             "verdict": "PARTIAL",
-            "quotes": [
-              "AWS EC2"
-            ]
+            "quotes": ["AWS EC2"]
           },
           {
             "label": "Docker",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Docker"
-            ]
+            "quotes": ["Docker"]
           }
         ]
       },
@@ -792,17 +726,12 @@
           {
             "label": "Java",
             "verdict": "MET",
-            "quotes": [
-              "Java 11 and Spring Boot services."
-            ]
+            "quotes": ["Java 11 and Spring Boot services."]
           },
           {
             "label": "Spring Boot",
             "verdict": "MET",
-            "quotes": [
-              "Spring Boot services.",
-              "Spring Boot REST backends."
-            ]
+            "quotes": ["Spring Boot services.", "Spring Boot REST backends."]
           },
           {
             "label": "Microservices",
@@ -820,9 +749,7 @@
           {
             "label": "SQL",
             "verdict": "PARTIAL",
-            "quotes": [
-              "MySQL"
-            ]
+            "quotes": ["MySQL"]
           },
           {
             "label": "Kafka",
@@ -916,9 +843,7 @@
           {
             "label": "Java",
             "verdict": "MET",
-            "quotes": [
-              "Senior Java Developer, Quillstone Labs, Pune"
-            ]
+            "quotes": ["Senior Java Developer, Quillstone Labs, Pune"]
           },
           {
             "label": "Spring Boot",
@@ -1044,9 +969,7 @@
           {
             "label": "Java",
             "verdict": "MET",
-            "quotes": [
-              "Senior Java Developer, Intellisoft Health, Pune"
-            ]
+            "quotes": ["Senior Java Developer, Intellisoft Health, Pune"]
           },
           {
             "label": "Spring Boot",
@@ -1089,9 +1012,7 @@
           {
             "label": "Docker",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Docker"
-            ]
+            "quotes": ["Docker"]
           }
         ]
       },
@@ -1123,16 +1044,12 @@
           {
             "label": "REST API design and development",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Maintain API test suites in Java with RestAssured"
-            ]
+            "quotes": ["Maintain API test suites in Java with RestAssured"]
           },
           {
             "label": "SQL",
             "verdict": "PARTIAL",
-            "quotes": [
-              "SQL"
-            ]
+            "quotes": ["SQL"]
           },
           {
             "label": "Kafka",
@@ -1161,9 +1078,7 @@
           {
             "label": "Java",
             "verdict": "MET",
-            "quotes": [
-              "Senior Java Developer with 6 years of experience"
-            ]
+            "quotes": ["Senior Java Developer with 6 years of experience"]
           },
           {
             "label": "Spring Boot",
@@ -1189,9 +1104,7 @@
           {
             "label": "SQL",
             "verdict": "PARTIAL",
-            "quotes": [
-              "MySQL"
-            ]
+            "quotes": ["MySQL"]
           },
           {
             "label": "Kafka",
@@ -1226,9 +1139,7 @@
           {
             "label": "Java",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Java (academic)"
-            ]
+            "quotes": ["Java (academic)"]
           },
           {
             "label": "Spring Boot",
@@ -1250,9 +1161,7 @@
           {
             "label": "SQL",
             "verdict": "PARTIAL",
-            "quotes": [
-              "PostgreSQL"
-            ]
+            "quotes": ["PostgreSQL"]
           },
           {
             "label": "Kafka",
@@ -1267,9 +1176,7 @@
           {
             "label": "Docker",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Docker"
-            ]
+            "quotes": ["Docker"]
           }
         ]
       },
@@ -1432,9 +1339,7 @@
           {
             "label": "KYC",
             "verdict": "MET",
-            "quotes": [
-              "KYC Analyst"
-            ]
+            "quotes": ["KYC Analyst"]
           },
           {
             "label": "AML checks",
@@ -1465,9 +1370,7 @@
           {
             "label": "Customer due diligence",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Customer due diligence"
-            ]
+            "quotes": ["Customer due diligence"]
           },
           {
             "label": "Sanctions screening tools",
@@ -1516,9 +1419,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "B.Com, Savitribai Phule Pune University, 2023 (74%)"
-            ]
+            "quotes": ["B.Com, Savitribai Phule Pune University, 2023 (74%)"]
           },
           {
             "label": "Customer due diligence",
@@ -1558,9 +1459,7 @@
           {
             "label": "MS Excel",
             "verdict": "PARTIAL",
-            "quotes": [
-              "MS Excel"
-            ]
+            "quotes": ["MS Excel"]
           },
           {
             "label": "Communication",
@@ -1570,9 +1469,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "B.Com, Fergusson College, Pune, 2021 (69%)"
-            ]
+            "quotes": ["B.Com, Fergusson College, Pune, 2021 (69%)"]
           },
           {
             "label": "Customer due diligence",
@@ -1613,16 +1510,12 @@
           {
             "label": "Communication",
             "verdict": "MET",
-            "quotes": [
-              "Good with Excel and English and Hindi communication."
-            ]
+            "quotes": ["Good with Excel and English and Hindi communication."]
           },
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "B.A., Chaudhary Charan Singh University, Meerut, 2024"
-            ]
+            "quotes": ["B.A., Chaudhary Charan Singh University, Meerut, 2024"]
           },
           {
             "label": "Customer due diligence",
@@ -1646,16 +1539,12 @@
           {
             "label": "KYC",
             "verdict": "MET",
-            "quotes": [
-              "KYC refresh for a securities broker"
-            ]
+            "quotes": ["KYC refresh for a securities broker"]
           },
           {
             "label": "AML checks",
             "verdict": "MET",
-            "quotes": [
-              "AML checks"
-            ]
+            "quotes": ["AML checks"]
           },
           {
             "label": "MS Excel",
@@ -1672,9 +1561,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "MBA, Finance, Jaipuria Institute of Management"
-            ]
+            "quotes": ["MBA, Finance, Jaipuria Institute of Management"]
           },
           {
             "label": "Customer due diligence",
@@ -1702,9 +1589,7 @@
           {
             "label": "KYC",
             "verdict": "MET",
-            "quotes": [
-              "document checks for new member forms"
-            ]
+            "quotes": ["document checks for new member forms"]
           },
           {
             "label": "AML checks",
@@ -1714,16 +1599,12 @@
           {
             "label": "MS Excel",
             "verdict": "MET",
-            "quotes": [
-              "prepared a monthly collection sheet in Excel."
-            ]
+            "quotes": ["prepared a monthly collection sheet in Excel."]
           },
           {
             "label": "Communication",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Communication"
-            ]
+            "quotes": ["Communication"]
           },
           {
             "label": "Graduate",
@@ -1766,9 +1647,7 @@
           {
             "label": "MS Excel",
             "verdict": "MET",
-            "quotes": [
-              "Track turnaround times in Excel and escalate delays."
-            ]
+            "quotes": ["Track turnaround times in Excel and escalate delays."]
           },
           {
             "label": "Communication",
@@ -1778,9 +1657,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "B.Com\nMaharshi Dayanand University, Rohtak\n2023\n66%"
-            ]
+            "quotes": ["B.Com\nMaharshi Dayanand University, Rohtak\n2023\n66%"]
           },
           {
             "label": "Customer due diligence",
@@ -1865,16 +1742,12 @@
           {
             "label": "AML checks",
             "verdict": "MET",
-            "quotes": [
-              "KYC and AML professional with 8 years of experience"
-            ]
+            "quotes": ["KYC and AML professional with 8 years of experience"]
           },
           {
             "label": "MS Excel",
             "verdict": "PARTIAL",
-            "quotes": [
-              "MS Excel"
-            ]
+            "quotes": ["MS Excel"]
           },
           {
             "label": "Communication",
@@ -1884,9 +1757,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "M.Com, Savitribai Phule Pune University, 2018"
-            ]
+            "quotes": ["M.Com, Savitribai Phule Pune University, 2018"]
           },
           {
             "label": "Customer due diligence",
@@ -1936,9 +1807,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "B.Com, Delhi University, 2023"
-            ]
+            "quotes": ["B.Com, Delhi University, 2023"]
           },
           {
             "label": "Customer due diligence",
@@ -1988,9 +1857,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "B.Com, Delhi University, 2023"
-            ]
+            "quotes": ["B.Com, Delhi University, 2023"]
           },
           {
             "label": "Customer due diligence",
@@ -2014,9 +1881,7 @@
           {
             "label": "KYC",
             "verdict": "MET",
-            "quotes": [
-              "KYC analyst with 4 years of experience"
-            ]
+            "quotes": ["KYC analyst with 4 years of experience"]
           },
           {
             "label": "AML checks",
@@ -2028,9 +1893,7 @@
           {
             "label": "MS Excel",
             "verdict": "MET",
-            "quotes": [
-              "Prepare weekly aging and rejection reports in Excel"
-            ]
+            "quotes": ["Prepare weekly aging and rejection reports in Excel"]
           },
           {
             "label": "Communication",
@@ -2040,9 +1903,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "B.Com (Hons), Delhi University, 2022"
-            ]
+            "quotes": ["B.Com (Hons), Delhi University, 2022"]
           },
           {
             "label": "Customer due diligence",
@@ -2054,9 +1915,7 @@
           {
             "label": "Sanctions screening tools",
             "verdict": "MET",
-            "quotes": [
-              "Screened applicants against sanctions and PEP lists"
-            ]
+            "quotes": ["Screened applicants against sanctions and PEP lists"]
           }
         ]
       }
@@ -2101,9 +1960,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "B.A., Delhi University (SOL), 2018"
-            ]
+            "quotes": ["B.A., Delhi University (SOL), 2018"]
           },
           {
             "label": "Retail domain experience",
@@ -2167,9 +2024,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "BR Com, Chaudhary Charan Sing University, 2019"
-            ]
+            "quotes": ["BR Com, Chaudhary Charan Sing University, 2019"]
           },
           {
             "label": "Retail domain experience",
@@ -2200,9 +2055,7 @@
           {
             "label": "Full store ownership",
             "verdict": "MET",
-            "quotes": [
-              "Held full P&L for a mall store with 32 staff."
-            ]
+            "quotes": ["Held full P&L for a mall store with 32 staff."]
           },
           {
             "label": "Cycle counts and replenishment planning",
@@ -2396,9 +2249,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "B.Com, Delhi University (SOL), 2022"
-            ]
+            "quotes": ["B.Com, Delhi University (SOL), 2022"]
           },
           {
             "label": "Retail domain experience",
@@ -2455,9 +2306,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "B.A.\nPanjab University, Chandigarh\n2017\n62%"
-            ]
+            "quotes": ["B.A.\nPanjab University, Chandigarh\n2017\n62%"]
           },
           {
             "label": "Retail domain experience",
@@ -2493,9 +2342,7 @@
           {
             "label": "Cycle counts and replenishment planning",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Assist in monthly stock take and display changes."
-            ]
+            "quotes": ["Assist in monthly stock take and display changes."]
           },
           {
             "label": "People handling and rostering",
@@ -2512,9 +2359,7 @@
           {
             "label": "Graduate",
             "verdict": "MET",
-            "quotes": [
-              "B.A., Chaudhary Charan Singh University, 2020"
-            ]
+            "quotes": ["B.A., Chaudhary Charan Singh University, 2020"]
           },
           {
             "label": "Retail domain experience",
@@ -2526,16 +2371,12 @@
           {
             "label": "POS knowledge",
             "verdict": "MET",
-            "quotes": [
-              "POS billing"
-            ]
+            "quotes": ["POS billing"]
           },
           {
             "label": "Visual merchandising",
             "verdict": "PARTIAL",
-            "quotes": [
-              "Visual display"
-            ]
+            "quotes": ["Visual display"]
           }
         ]
       }
