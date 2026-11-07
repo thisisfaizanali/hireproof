@@ -78,3 +78,8 @@ export function redact(
   }
   return out.replace(/\n{3,}/g, "\n\n").trim();
 }
+
+// A last guard for text a client reads: whatever else is true of the source,
+// no email address or phone number gets through.
+export const maskContacts = (text: string) =>
+  text.replace(EMAIL_ANYWHERE, "[email]").replace(PHONE_ANYWHERE, "[phone]");
