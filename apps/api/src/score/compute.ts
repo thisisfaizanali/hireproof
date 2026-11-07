@@ -102,6 +102,18 @@ export interface ComputedScore {
   flags: string[];
 }
 
+// Strong needs the total and no must-have missing; a partial one is allowed.
+export function bandFor(
+  total: number,
+  criteria: Pick<CriterionScore, "kind" | "verdict">[],
+): Band {
+  const missing = criteria.some(
+    (c) => c.kind === "MUST_HAVE" && c.verdict === "NOT_FOUND",
+  );
+  if (total >= STRONG_AT && !missing) return "STRONG";
+  return total >= POSSIBLE_AT ? "POSSIBLE" : "WEAK";
+}
+
 const SHARE: Record<Verdict, number> = { MET: 1, PARTIAL: 0.5, NOT_FOUND: 0 };
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -192,16 +204,7 @@ export function computeScore(
   const mustHavesMet = criteria.filter(
     (c) => c.kind === "MUST_HAVE" && c.verdict === "MET",
   ).length;
-  const mustHavesMissing = criteria.some(
-    (c) => c.kind === "MUST_HAVE" && c.verdict === "NOT_FOUND",
-  );
-
-  const band: Band =
-    total >= STRONG_AT && !mustHavesMissing
-      ? "STRONG"
-      : total >= POSSIBLE_AT
-        ? "POSSIBLE"
-        : "WEAK";
+  const band = bandFor(total, criteria);
 
   if (card.noticeMaxDays !== null) {
     if (profile.noticeDays === null) flags.push("Notice period is not stated.");
