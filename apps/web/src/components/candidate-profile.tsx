@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  consentSourceLabel,
   formatReqNumber,
   type CandidateDetail,
   type DuplicateStatus,
@@ -269,6 +270,37 @@ export function CandidateProfile({ id }: { id: string }) {
                       Open the CV
                     </Link>
                   )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section
+        aria-labelledby="consent-heading"
+        className="flex flex-col gap-3"
+      >
+        <h2 id="consent-heading">Consent</h2>
+        {c.consents.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No consent was recorded for these CVs. They were added before
+            consent was asked for.
+          </p>
+        ) : (
+          <ul className="border-t border-border">
+            {c.consents.map((k) => (
+              <li
+                key={k.cvId}
+                className="flex flex-col gap-1 border-b border-border py-3 text-sm"
+              >
+                <span className="break-words font-medium">{k.fileName}</span>
+                <span className="text-muted-foreground">
+                  Recorded by {k.attestedBy} on {formatDate(k.attestedAt)},
+                  source {consentSourceLabel(k.source).toLowerCase()}
+                  {k.sourceNote ? ` (${k.sourceNote})` : ""}. They attested that
+                  the candidate applied or agreed to be considered. Notice
+                  version <span className="num">{k.noticeVersion}</span>.
                 </span>
               </li>
             ))}
