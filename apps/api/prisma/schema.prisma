@@ -30,21 +30,24 @@ model Client {
 }
 
 model User {
-  id                  String          @id @default(cuid())
-  email               String          @unique
-  name                String
-  passwordHash        String
-  role                Role
-  clientId            String?
-  client              Client?         @relation(fields: [clientId], references: [id])
-  createdAt           DateTime        @default(now())
-  sessions            Session[]
-  auditEvents         AuditEvent[]
-  requisitions        Requisition[]
-  confirmedScorecards Scorecard[]
-  uploadBatches       UploadBatch[]
-  resolvedDuplicates  DuplicateLink[]
-  decidedApplications Application[]
+  id                    String            @id @default(cuid())
+  email                 String            @unique
+  name                  String
+  passwordHash          String
+  role                  Role
+  clientId              String?
+  client                Client?           @relation(fields: [clientId], references: [id])
+  createdAt             DateTime          @default(now())
+  sessions              Session[]
+  auditEvents           AuditEvent[]
+  requisitions          Requisition[]
+  confirmedScorecards   Scorecard[]
+  uploadBatches         UploadBatch[]
+  resolvedDuplicates    DuplicateLink[]
+  decidedApplications   Application[]
+  submittedApplications Application[]     @relation("submitter")
+  proposedSlots         InterviewSlot[]
+  outboundMessages      OutboundMessage[]
 }
 
 model Session {
@@ -314,6 +317,45 @@ enum RejectReason {
   OTHER
 }
 
+enum RejectedBy {
+  RECRUITER
+  CLIENT
+}
+
+enum ClientRejectReason {
+  SKILLS_GAP
+  EXPERIENCE
+  NOTICE_PERIOD
+  CTC
+  LOCATION
+  ALREADY_INTERVIEWED
+  OTHER
+}
+
+enum SlotMode {
+  VIDEO
+  IN_PERSON
+}
+
+enum SlotStatus {
+  PROPOSED
+  CONFIRMED
+  DECLINED
+}
+
+enum MessageRecipient {
+  CANDIDATE
+  CLIENT
+}
+
+enum MessageChannel {
+  EMAIL
+}
+
+enum MessageStatus {
+  MOCKED
+}
+
 enum ScoreBand {
   STRONG
   POSSIBLE
@@ -326,22 +368,31 @@ enum ScoreSource {
 }
 
 model Application {
-  id               String           @id @default(cuid())
-  candidateId      String
-  candidate        Candidate        @relation(fields: [candidateId], references: [id])
-  requisitionId    String
-  requisition      Requisition      @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
-  stage            ApplicationStage @default(SOURCED)
-  rejectReason     RejectReason?
-  rejectNote       String?
-  decidedById      String?
-  decidedBy        User?            @relation(fields: [decidedById], references: [id])
-  decidedAt        DateTime?
+  id                 String              @id @default(cuid())
+  candidateId        String
+  candidate          Candidate           @relation(fields: [candidateId], references: [id])
+  requisitionId      String
+  requisition        Requisition         @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  stage              ApplicationStage    @default(SOURCED)
+  rejectReason       RejectReason?
+  rejectNote         String?
+  decidedById        String?
+  decidedBy          User?               @relation(fields: [decidedById], references: [id])
+  decidedAt          DateTime?
+  submittedAt        DateTime?
+  submittedById      String?
+  submittedBy        User?               @relation("submitter", fields: [submittedById], references: [id])
+  submissionNote     String?
+  rejectedBy         RejectedBy?
+  clientRejectReason ClientRejectReason?
+  clientRejectNote   String?
   // Set while a score job runs, so the list can say "Scoring".
-  scoringStartedAt DateTime?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  scores           CandidateScore[]
+  scoringStartedAt   DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  scores             CandidateScore[]
+  slots              InterviewSlot[]
+  messages           OutboundMessage[]
 
   @@unique([candidateId, requisitionId])
   @@index([requisitionId, createdAt])
@@ -385,5 +436,39 @@ model CandidateScore {
   createdAt        DateTime    @default(now())
 
   @@unique([applicationId, scorecardVersion])
+  @@index([applicationId])
+}
+
+// A time the client proposes for an interview. The recruiter confirms one.
+model InterviewSlot {
+  id              String      @id @default(cuid())
+  applicationId   String
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  startsAt        DateTime    @db.Timestamptz(3)
+  durationMinutes Int
+  mode            SlotMode
+  note            String?
+  status          SlotStatus  @default(PROPOSED)
+  proposedById    String
+  proposedBy      User        @relation(fields: [proposedById], references: [id])
+  createdAt       DateTime    @default(now())
+
+  @@index([applicationId])
+}
+
+// Messaging is mocked: the row records what would be sent, and nothing is sent.
+model OutboundMessage {
+  id            String           @id @default(cuid())
+  applicationId String
+  application   Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  recipient     MessageRecipient
+  channel       MessageChannel   @default(EMAIL)
+  subject       String
+  body          String
+  status        MessageStatus    @default(MOCKED)
+  createdById   String
+  createdBy     User             @relation(fields: [createdById], references: [id])
+  createdAt     DateTime         @default(now())
+
   @@index([applicationId])
 }

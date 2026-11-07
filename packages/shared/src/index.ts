@@ -93,3 +93,4 @@ export * from "./scorecard";
 export * from "./skills";
 export * from "./cv";
 export * from "./score";
+export * from "./pipeline";
