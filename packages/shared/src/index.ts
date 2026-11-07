@@ -94,3 +94,5 @@ export * from "./skills";
 export * from "./cv";
 export * from "./score";
 export * from "./pipeline";
+export * from "./data";
+export * from "./insights";

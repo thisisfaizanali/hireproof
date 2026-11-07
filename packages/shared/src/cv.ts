@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ConsentInput, type ConsentView } from "./data";
 import type { ClientRejection, MessageView, SlotView } from "./pipeline";
 import type { ConstraintFlag, ScoreState, ScoreSummary } from "./score";
 
@@ -37,6 +38,7 @@ export const CreateBatchInput = z.object({
       CV_LIMITS.batchFiles,
       `Upload at most ${CV_LIMITS.batchFiles} files at a time`,
     ),
+  consent: ConsentInput,
 });
 export type CreateBatchInput = z.infer<typeof CreateBatchInput>;
 
@@ -177,6 +179,7 @@ export interface CandidateDetail {
     cvId: string | null;
   }[];
   duplicates: CandidateDuplicate[];
+  consents: ConsentView[];
 }
 
 export interface DuplicateSide {

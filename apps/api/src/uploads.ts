@@ -4,15 +4,18 @@ import { Router, type RequestHandler } from "express";
 import multer from "multer";
 import {
   CV_FINAL_STATUSES,
+  CONSENT_NOTICE_VERSION,
   CV_LIMITS,
   CreateBatchInput,
   type CvStatus,
   type FileResult,
   type UploadBatchView,
 } from "@hireproof/shared";
+import { audit } from "./audit";
 import { requireAuth, requireRole } from "./auth";
 import { enqueueCv } from "./cv/queue";
 import { prisma } from "./db";
+import { badInput } from "./http";
 import type { Prisma } from "./generated/prisma/client";
 
 export const uploads = Router();
@@ -107,13 +110,7 @@ uploads.post(
   ...recruiterOnly,
   async (req, res) => {
     const input = CreateBatchInput.safeParse(req.body);
-    if (!input.success) {
-      res.status(400).json({
-        error: input.error.issues[0].message,
-        fields: { expectedCount: input.error.issues[0].message },
-      });
-      return;
-    }
+    if (!input.success) return badInput(res, input.error);
     const requisition = await prisma.requisition.findUnique({
       where: { id: String(req.params.id) },
       select: { id: true },
@@ -127,7 +124,22 @@ uploads.post(
         requisitionId: requisition.id,
         uploadedById: req.user!.id,
         expectedCount: input.data.expectedCount,
+        consentSource: input.data.consent.source,
+        consentSourceNote: input.data.consent.sourceNote || null,
+        consentAt: new Date(),
       },
+    });
+    await audit({
+      action: "UPLOAD_CONSENT_RECORDED",
+      actorId: req.user!.id,
+      entityType: "UploadBatch",
+      entityId: batch.id,
+      meta: {
+        requisitionId: requisition.id,
+        source: input.data.consent.source,
+        noticeVersion: CONSENT_NOTICE_VERSION,
+      },
+      ip: req.ip,
     });
     res.status(201).json({ batchId: batch.id });
   },
@@ -144,6 +156,12 @@ uploads.post(
     });
     if (!batch) {
       res.status(404).json({ error: "Upload not found" });
+      return;
+    }
+    if (!batch.consentSource || !batch.consentAt) {
+      res.status(409).json({
+        error: "This upload has no consent recorded. Start a new upload.",
+      });
       return;
     }
 
@@ -186,6 +204,16 @@ uploads.post(
           sizeBytes: file.size,
           sha256: createHash("sha256").update(file.buffer).digest("hex"),
           data: new Uint8Array(file.buffer),
+          consent: {
+            create: {
+              basis: "APPLIED_OR_AGREED",
+              source: batch.consentSource,
+              sourceNote: batch.consentSourceNote,
+              attestedById: batch.uploadedById,
+              attestedAt: batch.consentAt,
+              noticeVersion: CONSENT_NOTICE_VERSION,
+            },
+          },
         },
         select: { id: true },
       });
