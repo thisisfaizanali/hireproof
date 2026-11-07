@@ -574,6 +574,25 @@ describe("rulesScore", () => {
     expect(verdictOf(rulesScore(criteria, ritika), "excel")).toBe("NOT_FOUND");
   });
 
+  it("meets a graduate requirement from the education section only", () => {
+    const grad = [{ id: "g", label: "Graduate" }];
+    const cv = [
+      "SKILLS",
+      "Java",
+      "",
+      "EDUCATION",
+      "B.Com, Delhi University, 2016",
+      "",
+      "EXPERIENCE",
+      "KYC analyst",
+    ].join("\n");
+    const [met] = rulesScore(grad, cv);
+    expect(met.verdict).toBe("MET");
+    expect(met.quotes).toEqual(["B.Com, Delhi University, 2016"]);
+    const none = ["SKILLS", "Java", "", "EXPERIENCE", "B.Com team"].join("\n");
+    expect(rulesScore(grad, none)[0].verdict).toBe("NOT_FOUND");
+  });
+
   it("returns quotes that verify against the same text", () => {
     const rows = rulesScore(criteria, ritika);
     const checked = verifyEvidence(criteria, rows, ritika);
@@ -592,6 +611,12 @@ describe("scorePrompt", () => {
     expect(messages[0].content).toMatch(/untrusted data/);
     expect(messages[0].content).toMatch(/ignore them/);
     expect(messages[1].content).toContain("<<<CV\nSome CV text\nCV>>>");
+  });
+
+  it("treats a line in the education section as evidence for a degree requirement", () => {
+    const { messages } = scorePrompt(criteria, "Some CV text");
+    expect(messages[0].content).toMatch(/education section/);
+    expect(messages[0].content).toMatch(/graduate/);
   });
 
   it("cannot be closed early by a CV that contains the delimiter", () => {

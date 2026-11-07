@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { canonicalSkill, type Verdict } from "@hireproof/shared";
+import { canonicalSkill, isSoftSkill, type Verdict } from "@hireproof/shared";
 import type { Extracted } from "../src/ai/rules";
 import type { ScoreCard, ScoreProfile } from "../src/score/compute";
 import type { RawVerdict } from "../src/score/evidence";
@@ -21,7 +21,8 @@ export const poolFor = (key: string) =>
   );
 
 // A confirmed scorecard has been through review: flags cleared, and at least
-// one must-have, taken from the ground truth when the extraction was weak.
+// one must-have, taken from the ground truth when the extraction was weak. A
+// recruiter moves soft skills a CV cannot evidence down to nice-to-have.
 export function reviewedScorecard(
   scorecard: Extracted,
   jd: JdTruth,
@@ -31,8 +32,11 @@ export function reviewedScorecard(
     ...scorecard,
     criteria: scorecard.criteria.map((c) => ({
       ...c,
-      kind:
-        wanted.has(c.label) || c.kind === "MUST_HAVE" ? "MUST_HAVE" : c.kind,
+      kind: isSoftSkill(c.label)
+        ? "NICE_TO_HAVE"
+        : wanted.has(c.label) || c.kind === "MUST_HAVE"
+          ? "MUST_HAVE"
+          : c.kind,
       needsReview: false,
     })),
   };

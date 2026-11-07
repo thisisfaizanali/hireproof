@@ -3,6 +3,7 @@ import {
   LlmScorecard,
   canonicalSkill,
   findQuote,
+  flagSoftSkills,
   type AiOutcome,
   type CriterionView,
   type ScorecardSource,
@@ -164,10 +165,14 @@ export function finalize(raw: LlmScorecard, jdText: string): Extracted {
   ].slice(0, LIMITS.locations);
 
   const title = raw.title && clean(raw.title).slice(0, 120);
+  const soft = flagSoftSkills(
+    [...merged.values()].slice(0, LIMITS.criteria),
+    ambiguities,
+  );
 
   return {
     title: title || null,
-    criteria: [...merged.values()].slice(0, LIMITS.criteria),
+    criteria: soft.criteria,
     experience: {
       minYears,
       maxYears,
@@ -188,7 +193,7 @@ export function finalize(raw: LlmScorecard, jdText: string): Extracted {
       values: places,
       ...constraint(places.length > 0, raw.locations.sourceQuote),
     },
-    ambiguities: [...new Set(ambiguities)].slice(0, 10),
+    ambiguities: [...new Set(soft.ambiguities)].slice(0, 10),
   };
 }
 

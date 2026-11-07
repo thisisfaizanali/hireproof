@@ -64,12 +64,25 @@ function skillOf(label: string) {
 // summary line is MET, one that only sits in a skills list is PARTIAL, and
 // anything else cannot be judged by pattern and is NOT_FOUND. The quote is the
 // matched line, checked against the CV like any other.
+const DEGREE_LABEL =
+  /^(?:graduate|graduation|degree|bachelor'?s?(?: degree)?)$/i;
+const DEGREE_LINE =
+  /\b(?:b\.?\s?tech|b\.?\s?e\.?|b\.?\s?com|b\.?\s?sc|b\.?\s?a\.?|bca|bba|bbm|m\.?\s?tech|m\.?\s?com|m\.?\s?sc|mca|mba|bachelor|master|graduat\w*|post[-\s]?graduat\w*|diploma)\b/i;
+
 export function rulesScore(
   criteria: { id: string; label: string }[],
   redactedText: string,
 ): RawVerdict[] {
   const lines = classify(redactedText);
   return criteria.map(({ id, label }) => {
+    if (DEGREE_LABEL.test(label.trim())) {
+      const line = lines.find(
+        (l) => l.section === "education" && DEGREE_LINE.test(l.text),
+      );
+      return line
+        ? { id, verdict: "MET", quotes: [excerpt(line.text, 0)] }
+        : { id, verdict: "NOT_FOUND", quotes: [] };
+    }
     const skill = skillOf(label);
     if (!skill) return { id, verdict: "NOT_FOUND", quotes: [] };
     let listed: string | null = null;
