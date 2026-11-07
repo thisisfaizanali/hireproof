@@ -9,6 +9,7 @@ import { cvView } from "./cvView";
 import { env } from "./env";
 import { health } from "./health";
 import { portal } from "./portal";
+import { portalActions } from "./portalActions";
 import { requisitions } from "./requisitions";
 import { uploads } from "./uploads";
 
@@ -56,6 +57,7 @@ app.use(candidates);
 app.use(applications);
 app.use(cvView);
 app.use(portal);
+app.use(portalActions);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });

@@ -20,7 +20,7 @@ export const portal = Router();
 
 // Every portal route is for a hiring manager and is scoped to their client in
 // the query itself, so another client's ids are simply not found.
-const clientOnly: RequestHandler[] = [
+export const clientOnly: RequestHandler[] = [
   requireAuth,
   requireRole("CLIENT_HM"),
   (req, res, next) => {
