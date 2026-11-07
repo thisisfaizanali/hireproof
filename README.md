@@ -6,7 +6,7 @@ This repository holds the foundation (sign-in, role-based shells, API, shared sc
 
 ## Prerequisites
 
-- Node 24 (see `.nvmrc`) and npm
+- Node 26 (see `.nvmrc`) and npm
 - Docker, for the local Postgres database
 
 ## Local setup
