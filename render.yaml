@@ -1,0 +1,33 @@
+# Render Blueprint for the API. The web app lives on Vercel and the database on
+# Neon. See docs/deployment.md for the steps and the values to fill in.
+services:
+  - type: web
+    name: hireproof-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Vercel, then Render's own proxies, sit in front of the app. See
+      # docs/deployment.md for how this number is worked out.
+      - key: TRUST_PROXY
+        value: "4"
+      # One CV at a time keeps the 512 MB instance clear of its memory limit.
+      - key: CV_CONCURRENCY
+        value: "1"
+      - key: LLM_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: LLM_MODEL
+        value: openai/gpt-oss-120b
+      - key: LLM_PARSE_MODEL
+        value: openai/gpt-oss-20b
+      # Secrets: Render asks for these when the Blueprint is first applied.
+      - key: DATABASE_URL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
