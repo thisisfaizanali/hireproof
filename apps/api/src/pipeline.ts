@@ -7,6 +7,7 @@ import {
   type MessageView,
   type Stage,
 } from "@hireproof/shared";
+import { markActive } from "./activity";
 import { audit } from "./audit";
 import { requireAuth, requireRole } from "./auth";
 import { prisma } from "./db";
@@ -66,6 +67,7 @@ pipeline.post(
       res.status(409).json({ error: "This candidate was already moved." });
       return;
     }
+    await markActive(app.id);
     await audit({
       action: "STAGE_CHANGED",
       actorId: req.user!.id,
@@ -144,6 +146,7 @@ pipeline.post("/api/slots/:id/confirm", ...recruiterOnly, async (req, res) => {
     res.status(409).json({ error: "This candidate was already moved." });
     return;
   }
+  await markActive(app.id);
   const base = {
     actorId: req.user!.id,
     entityType: "Application",
