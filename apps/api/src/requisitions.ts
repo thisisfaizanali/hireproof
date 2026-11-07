@@ -20,6 +20,7 @@ import { requireAuth, requireRole } from "./auth";
 import { prisma } from "./db";
 import { ExtractError, extractText, type ExtractErrorCode } from "./extract";
 import type { Prisma } from "./generated/prisma/client";
+import { queueRequisition } from "./score/trigger";
 
 export const requisitions = Router();
 
@@ -529,6 +530,15 @@ requisitions.put(
         meta: { version: old.version + 1 },
         ip: req.ip,
       });
+      // Scores for earlier versions stay on record but no longer count.
+      await prisma.candidateScore.updateMany({
+        where: {
+          application: { requisitionId: row.id },
+          scorecardVersion: { lte: old.version },
+        },
+        data: { stale: true },
+      });
+      await queueRequisition(row.id);
     }
     if (becomesOpen) {
       await audit({

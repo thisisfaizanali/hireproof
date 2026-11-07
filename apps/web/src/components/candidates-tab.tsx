@@ -1,16 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type {
   CandidateList,
   CandidateRow,
   PendingDuplicate,
   DuplicateSide,
+  ScoreResponse,
 } from "@hireproof/shared";
 import { EmptyState } from "@/components/empty-state";
 import { Flag, formatPhone, notice, years } from "@/components/cv-status";
 import { CvUpload } from "@/components/cv-upload";
+import {
+  BandLabel,
+  STAGE_LABEL,
+  ScorePanel,
+  pendingLabel,
+} from "@/components/score";
 import { Button } from "@/components/ui/button";
 import { FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -52,8 +59,8 @@ export function CandidatesTab({
     <div className="flex flex-col gap-8">
       {!scorecardConfirmed && (
         <p className="rounded-md bg-warning-soft px-4 py-3 text-sm text-warning">
-          The scorecard is not confirmed yet. CVs can be uploaded now; scoring
-          needs a confirmed scorecard.
+          Confirm the scorecard to rank candidates. CVs can be uploaded now and
+          are scored once it is confirmed.
         </p>
       )}
       <CvUpload
@@ -72,6 +79,23 @@ export function CandidatesTab({
   );
 }
 
+const BANDS = [
+  ["", "All bands"],
+  ["STRONG", "Strong match"],
+  ["POSSIBLE", "Possible match"],
+  ["WEAK", "Weak match"],
+  ["UNSCORED", "Not scored yet"],
+] as const;
+
+const STAGES = [
+  ["", "All stages"],
+  ["SOURCED", "Sourced"],
+  ["SCREENED", "Screened"],
+  ["REJECTED", "Not a fit"],
+] as const;
+
+const PENDING = ["WAITING", "SCORING", "RESCORING"];
+
 function CandidateTable({
   requisitionId,
   version,
@@ -82,9 +106,13 @@ function CandidateTable({
   const [search, setSearch] = useState("");
   const [typed, setTyped] = useState("");
   const [status, setStatus] = useState("");
+  const [band, setBand] = useState("");
+  const [stage, setStage] = useState("");
   const [page, setPage] = useState(1);
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [attempt, setAttempt] = useState(0);
+  const [tick, setTick] = useState(0);
+  const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -99,24 +127,49 @@ function CandidateTable({
     const params = new URLSearchParams({ page: String(page) });
     if (search) params.set("search", search);
     if (status) params.set("status", status);
+    if (band) params.set("band", band);
+    if (stage) params.set("stage", stage);
     void api<CandidateList>(
       `/api/requisitions/${requisitionId}/candidates?${params}`,
     ).then((res) => {
       if (!current) return;
-      setLoad(
+      setLoad((prev) =>
         res.ok
           ? { state: "ready", list: res.data }
-          : { state: "error", message: res.error },
+          : prev.state === "ready"
+            ? prev
+            : { state: "error", message: res.error },
       );
     });
     return () => {
       current = false;
     };
-  }, [requisitionId, search, status, page, version, attempt]);
+  }, [
+    requisitionId,
+    search,
+    status,
+    band,
+    stage,
+    page,
+    version,
+    attempt,
+    tick,
+  ]);
 
-  const filtered = search !== "" || status !== "";
   const list = load.state === "ready" ? load.list : null;
+  const waiting =
+    list?.items.some((c) => c.scoreState && PENDING.includes(c.scoreState)) ??
+    false;
+  useEffect(() => {
+    if (!waiting) return;
+    const t = setInterval(() => setTick((n) => n + 1), 4000);
+    return () => clearInterval(t);
+  }, [waiting]);
+
+  const filtered =
+    search !== "" || status !== "" || band !== "" || stage !== "";
   const pages = list ? Math.max(1, Math.ceil(list.total / list.pageSize)) : 1;
+  const ranked = list?.ranked ?? false;
 
   return (
     <section
@@ -124,6 +177,18 @@ function CandidateTable({
       className="flex flex-col gap-4"
     >
       <h2 id="candidates-heading">Candidates</h2>
+
+      {list?.progress && (
+        <p className="text-sm" aria-live="polite">
+          Scored <span className="num">{list.progress.scored}</span> of{" "}
+          <span className="num">{list.progress.total}</span>
+          {list.progress.scored < list.progress.total && (
+            <span className="text-muted-foreground">
+              . Scoring continues in the background.
+            </span>
+          )}
+        </p>
+      )}
 
       <form
         role="search"
@@ -139,6 +204,42 @@ function CandidateTable({
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
           />
+        </div>
+        {ranked && (
+          <div className="flex w-full flex-col gap-1 sm:w-44">
+            <FieldLabel htmlFor="candidate-band">Match</FieldLabel>
+            <Select
+              id="candidate-band"
+              value={band}
+              onChange={(e) => {
+                setBand(e.target.value);
+                setPage(1);
+              }}
+            >
+              {BANDS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
+        <div className="flex w-full flex-col gap-1 sm:w-40">
+          <FieldLabel htmlFor="candidate-stage">Stage</FieldLabel>
+          <Select
+            id="candidate-stage"
+            value={stage}
+            onChange={(e) => {
+              setStage(e.target.value);
+              setPage(1);
+            }}
+          >
+            {STAGES.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
         </div>
         <div className="flex w-full flex-col gap-1 sm:w-52">
           <FieldLabel htmlFor="candidate-status">Show</FieldLabel>
@@ -207,7 +308,7 @@ function CandidateTable({
           }
         >
           {filtered
-            ? "Change or clear the search and filter to see more."
+            ? "Change or clear the search and filters to see more."
             : "Parsed candidates appear here as soon as their CVs are read."}
         </EmptyState>
       )}
@@ -215,18 +316,33 @@ function CandidateTable({
       {list && list.items.length > 0 && (
         <>
           <table className="hidden w-full border-collapse text-sm md:table">
-            <caption className="visually-hidden">Candidates</caption>
+            <caption className="visually-hidden">
+              {ranked ? "Candidates, ranked by score" : "Candidates"}
+            </caption>
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
-                {[
-                  "Code",
-                  "Name",
-                  "Current role",
-                  "Experience",
-                  "Notice",
-                  "Location",
-                  "Flags",
-                ].map((head) => (
+                {(ranked
+                  ? [
+                      "Rank",
+                      "Score",
+                      "Must-haves",
+                      "Name",
+                      "Current role",
+                      "Experience",
+                      "Notice",
+                      "Location",
+                      "Flags",
+                    ]
+                  : [
+                      "Code",
+                      "Name",
+                      "Current role",
+                      "Experience",
+                      "Notice",
+                      "Location",
+                      "Flags",
+                    ]
+                ).map((head) => (
                   <th key={head} scope="col" className="py-2 pr-4 font-medium">
                     {head}
                   </th>
@@ -235,50 +351,114 @@ function CandidateTable({
             </thead>
             <tbody>
               {list.items.map((c) => (
-                <tr
-                  key={c.id}
-                  className="border-b border-border hover:bg-accent"
-                >
-                  <td className="num py-3 pr-4">{c.code}</td>
-                  <td className="py-3 pr-4 font-medium">
-                    <Link
-                      href={`/candidates/${c.id}`}
-                      className="underline-offset-4 hover:underline"
-                    >
-                      {c.name}
-                    </Link>
-                  </td>
-                  <td className="py-3 pr-4">{c.currentRole ?? "Not stated"}</td>
-                  <td className="num py-3 pr-4">
-                    {c.totalExperienceYears === null
-                      ? "Not stated"
-                      : `${c.totalExperienceYears} y`}
-                  </td>
-                  <td className="py-3 pr-4">
-                    {notice(c.noticeText, c.noticeDays)}
-                  </td>
-                  <td className="py-3 pr-4">{c.location ?? "Not stated"}</td>
-                  <td className="py-3">
-                    <Flags c={c} />
-                  </td>
-                </tr>
+                <Fragment key={c.id}>
+                  <tr className="border-b border-border hover:bg-accent">
+                    {ranked ? (
+                      <>
+                        <td className="num py-3 pr-4">{c.rank ?? ""}</td>
+                        <td className="py-3 pr-4">
+                          <ScoreCell
+                            c={c}
+                            open={open === c.applicationId}
+                            onToggle={() =>
+                              setOpen(
+                                open === c.applicationId
+                                  ? null
+                                  : c.applicationId,
+                              )
+                            }
+                          />
+                        </td>
+                        <td className="num py-3 pr-4">
+                          {c.score && c.score.mustHavesTotal > 0
+                            ? `${c.score.mustHavesMet} of ${c.score.mustHavesTotal}`
+                            : ""}
+                        </td>
+                      </>
+                    ) : (
+                      <td className="num py-3 pr-4">{c.code}</td>
+                    )}
+                    <td className="py-3 pr-4 font-medium">
+                      <Link
+                        href={`/candidates/${c.id}`}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {c.name}
+                      </Link>
+                      {c.stage !== "SOURCED" && (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {STAGE_LABEL[c.stage] ?? c.stage}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 pr-4">
+                      {c.currentRole ?? "Not stated"}
+                    </td>
+                    <td className="num py-3 pr-4">
+                      {c.totalExperienceYears === null
+                        ? "Not stated"
+                        : `${c.totalExperienceYears} y`}
+                    </td>
+                    <td className="py-3 pr-4">
+                      {notice(c.noticeText, c.noticeDays)}
+                    </td>
+                    <td className="py-3 pr-4">{c.location ?? "Not stated"}</td>
+                    <td className="py-3">
+                      <Flags c={c} />
+                    </td>
+                  </tr>
+                  {open === c.applicationId && (
+                    <tr className="border-b border-border bg-card">
+                      <td colSpan={9} className="px-4 py-4">
+                        <Why c={c} requisitionId={requisitionId} />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>
 
           <ul className="flex flex-col border-t border-border md:hidden">
             {list.items.map((c) => (
-              <li key={c.id} className="border-b border-border">
-                <Link
-                  href={`/candidates/${c.id}`}
-                  className="flex flex-col gap-1.5 py-3"
-                >
+              <li key={c.id} className="border-b border-border py-3">
+                <div className="flex flex-col gap-1.5">
                   <span className="flex items-baseline justify-between gap-3">
-                    <span className="font-medium">{c.name}</span>
+                    <Link
+                      href={`/candidates/${c.id}`}
+                      className="font-medium underline-offset-4 hover:underline"
+                    >
+                      {ranked && c.rank !== null && (
+                        <span className="num mr-2 text-muted-foreground">
+                          {c.rank}
+                        </span>
+                      )}
+                      {c.name}
+                    </Link>
                     <span className="num text-sm text-muted-foreground">
                       {c.code}
                     </span>
                   </span>
+                  {ranked && (
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <ScoreCell
+                        c={c}
+                        open={open === c.applicationId}
+                        onToggle={() =>
+                          setOpen(
+                            open === c.applicationId ? null : c.applicationId,
+                          )
+                        }
+                      />
+                      {c.score && c.score.mustHavesTotal > 0 && (
+                        <span className="text-sm">
+                          <span className="num">{c.score.mustHavesMet}</span> of{" "}
+                          <span className="num">{c.score.mustHavesTotal}</span>{" "}
+                          must-haves
+                        </span>
+                      )}
+                    </span>
+                  )}
                   <span className="text-sm text-muted-foreground">
                     {c.currentRole ?? "Role not stated"},{" "}
                     {c.location ?? "location not stated"}
@@ -297,8 +477,18 @@ function CandidateTable({
                       ? (c.noticeText ?? "notice not stated")
                       : `notice ${notice(c.noticeText, c.noticeDays).toLowerCase()}`}
                   </span>
+                  {c.stage !== "SOURCED" && (
+                    <span className="text-sm text-muted-foreground">
+                      {STAGE_LABEL[c.stage] ?? c.stage}
+                    </span>
+                  )}
                   <Flags c={c} />
-                </Link>
+                  {open === c.applicationId && (
+                    <div className="mt-2 border-t border-border pt-3">
+                      <Why c={c} requisitionId={requisitionId} />
+                    </div>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
@@ -337,6 +527,122 @@ function CandidateTable({
         </>
       )}
     </section>
+  );
+}
+
+// The score and its band in words, or why there is no score yet.
+function ScoreCell({
+  c,
+  open,
+  onToggle,
+}: {
+  c: CandidateRow;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  if (!c.score) {
+    return (
+      <span className="text-sm text-muted-foreground">
+        {c.scoreState && c.scoreState !== "SCORED"
+          ? pendingLabel(c.scoreState)
+          : ""}
+      </span>
+    );
+  }
+  return (
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span className="num text-md">{c.score.total}</span>
+      <BandLabel band={c.score.band} />
+      {c.score.source === "RULES" && (
+        <span className="text-xs text-review">Scored without AI</span>
+      )}
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={onToggle}
+        className="rounded-sm text-sm whitespace-nowrap underline underline-offset-4 hover:no-underline"
+      >
+        {open ? "Hide why" : "Why this score"}
+      </button>
+    </span>
+  );
+}
+
+// Loads the breakdown only when a row is opened.
+function Why({ c, requisitionId }: { c: CandidateRow; requisitionId: string }) {
+  const [state, setState] = useState<
+    | { state: "loading" }
+    | { state: "error"; message: string }
+    | { state: "ready"; data: ScoreResponse }
+  >({ state: "loading" });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let current = true;
+    void api<ScoreResponse>(`/api/applications/${c.applicationId}/score`).then(
+      (res) => {
+        if (current) {
+          setState(
+            res.ok
+              ? { state: "ready", data: res.data }
+              : { state: "error", message: res.error },
+          );
+        }
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, [c.applicationId, attempt]);
+
+  if (state.state === "loading") {
+    return (
+      <div
+        role="status"
+        aria-label="Loading the breakdown"
+        className="h-32 rounded-md bg-muted"
+      />
+    );
+  }
+  if (state.state === "error") {
+    return (
+      <div role="alert" className="flex flex-col items-start gap-2">
+        <p className="text-sm text-destructive">{state.message}</p>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            setState({ state: "loading" });
+            setAttempt((n) => n + 1);
+          }}
+        >
+          Try again
+        </Button>
+      </div>
+    );
+  }
+  const { score } = state.data;
+  return (
+    <div className="flex max-w-2xl flex-col gap-3">
+      {score ? (
+        <ScorePanel score={score} />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          {pendingLabel(
+            state.data.state === "SCORED" ? "WAITING" : state.data.state,
+          )}
+          .
+        </p>
+      )}
+      {c.cvId && (
+        <Link
+          href={`/candidates/${c.id}/cv/${c.cvId}?requisition=${requisitionId}`}
+          className="self-start text-sm underline underline-offset-4 hover:no-underline"
+        >
+          Open the CV with the evidence marked
+        </Link>
+      )}
+    </div>
   );
 }
 

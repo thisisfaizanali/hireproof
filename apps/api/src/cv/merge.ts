@@ -136,10 +136,13 @@ export function guessLocation(text: string): string | null {
 // Employer names for the duplicate comparison: the second comma-separated part
 // of a role line that carries a date range, as in "Java Developer, Acme, Noida
 // Jan 2020 - Present". Layouts that put employers in table cells give none.
+const EDUCATION =
+  /\b(?:universit(?:y|ies)|college|institute|school|academy|polytechnic|bachelors?|masters?|b\.?\s?a|m\.?\s?a|b\.?\s?ed|m\.?\s?ed|llb|llm|b\.?\s?pharm|b\.?\s?arch)\b/i;
+
 export function findEmployers(text: string): string[] {
   const names = new Set<string>();
   for (const line of text.split("\n")) {
-    if (DEGREE.test(line)) continue;
+    if (DEGREE.test(line) || EDUCATION.test(line)) continue;
     if (!/\b(?:19|20)\d{2}\b|\d{1,2}\/\d{4}/.test(line)) continue;
     const parts = line.split(",");
     const name = parts.length >= 3 ? parts[1].trim() : "";

@@ -21,6 +21,8 @@ export interface CvTruth {
   expectedCtcLpa: number | null;
   personalFieldsPresent: string[];
   intendedRequisition: string | null;
+  expectedFit: "strong" | "partial" | "poor";
+  adversarial: string | null;
 }
 
 const manifest = JSON.parse(

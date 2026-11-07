@@ -8,7 +8,7 @@ import {
   parseNotice,
   rulesProfile,
 } from "../src/cv/rules";
-import { guessName } from "../src/cv/merge";
+import { findEmployers, guessName } from "../src/cv/merge";
 import { ASOF, textCorpus } from "./cvCorpus";
 
 const today = new Date(Date.UTC(2026, 10, 15));
@@ -232,5 +232,21 @@ describe("guessName", () => {
 
   it("gives up rather than guess from a heading", () => {
     expect(guessName("CURRICULUM VITAE\nSKILLS\nJava", null)).toBeNull();
+  });
+});
+
+describe("findEmployers", () => {
+  it("lists employers from dated role lines", () => {
+    const text = "Java Developer, Acme Systems, Noida Jan 2020 - Present";
+    expect(findEmployers(text)).toEqual(["Acme Systems"]);
+  });
+
+  it.each([
+    "B.A. Economics, Delhi University, 2012 - 2015",
+    "Bachelor of Commerce, St Xavier's College, Mumbai 2010 - 2013",
+    "MBA Finance, Symbiosis Institute, Pune 2016 - 2018",
+    "Class XII, Modern School, Delhi 2008 - 2010",
+  ])("leaves out the school on %s", (line) => {
+    expect(findEmployers(line)).toEqual([]);
   });
 });
