@@ -145,6 +145,8 @@ model Scorecard {
   locationsReview    Boolean  @default(false)
 
   ambiguities   String[]
+  // Of the confirmed criteria and ranges, so confirming an unchanged card changes nothing.
+  contentHash   String?
   source        ScorecardSource
   model         String?
   status        ScorecardStatus @default(DRAFT)

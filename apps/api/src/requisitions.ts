@@ -21,6 +21,7 @@ import { prisma } from "./db";
 import { ExtractError, extractText, type ExtractErrorCode } from "./extract";
 import type { Prisma } from "./generated/prisma/client";
 import { queueRequisition } from "./score/trigger";
+import { scorecardHash } from "./scorecardHash";
 
 export const requisitions = Router();
 
@@ -483,6 +484,17 @@ requisitions.put(
       });
     }
     const becomesOpen = confirm && row.status === "DRAFT";
+    // Confirming the same criteria and ranges again keeps the version, so no
+    // score goes stale and nothing is queued.
+    const hash = scorecardHash({
+      criteria,
+      experienceMinYears: minYears,
+      experienceMaxYears: maxYears,
+      noticeMaxDays: body.notice.maxDays,
+      ctcMaxLpa: body.ctc.maxLpa,
+      locations: places,
+    });
+    const unchanged = confirm && old.contentHash === hash;
 
     await prisma.$transaction([
       prisma.criterion.deleteMany({ where: { scorecardId: old.id } }),
@@ -503,11 +515,13 @@ requisitions.put(
           locationsQuote: where.quote,
           locationsReview: where.review,
           status: confirm ? "CONFIRMED" : "DRAFT",
-          ...(confirm && {
-            version: { increment: 1 },
-            confirmedAt: new Date(),
-            confirmedById: req.user!.id,
-          }),
+          ...(confirm &&
+            !unchanged && {
+              version: { increment: 1 },
+              confirmedAt: new Date(),
+              confirmedById: req.user!.id,
+              contentHash: hash,
+            }),
           criteria: { create: criteria },
         },
       }),
@@ -521,7 +535,7 @@ requisitions.put(
         : []),
     ]);
 
-    if (confirm) {
+    if (confirm && !unchanged) {
       await audit({
         action: "SCORECARD_CONFIRMED",
         actorId: req.user!.id,

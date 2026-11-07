@@ -345,8 +345,17 @@ describe("scorecard review", () => {
     const row = await prisma.scorecard.findFirstOrThrow();
     expect(row.confirmedById).toBe(user.id);
 
-    const second = await put(cookie, req.id, confirmable(req));
-    expect(second.body.scorecard.version).toBe(2);
+    // The same criteria and ranges again change nothing.
+    const same = await put(cookie, req.id, confirmable(req));
+    expect(same.body.scorecard.version).toBe(1);
+    const changed = await put(cookie, req.id, {
+      ...confirmable(req),
+      criteria: [
+        { kind: "MUST_HAVE", label: "Java" },
+        { kind: "NICE_TO_HAVE", label: "Kafka" },
+      ],
+    });
+    expect(changed.body.scorecard.version).toBe(2);
     const events = await prisma.auditEvent.findMany({
       where: { action: "SCORECARD_CONFIRMED" },
       orderBy: { createdAt: "asc" },

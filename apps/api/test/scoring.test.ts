@@ -437,6 +437,70 @@ describe("a changed scorecard", () => {
   });
 });
 
+describe("confirming an unchanged scorecard", () => {
+  const LABELS = ["Java", "Spring Boot", "Kafka", "Docker"];
+  const card = () =>
+    prisma.scorecard.findUniqueOrThrow({ where: { requisitionId } });
+
+  it("bumps nothing and queues no re-scoring", async () => {
+    const { applicationId } = await parsed();
+    await processScore(
+      applicationId,
+      scoreDeps(vi.fn().mockResolvedValue(goodReply())).deps,
+    );
+    // The first confirm of a card with no stored hash counts as a change.
+    expect((await confirmWith(LABELS)).status).toBe(200);
+    const first = await card();
+    expect(first.version).toBe(2);
+    expect(first.contentHash).toMatch(/^[0-9a-f]{64}$/);
+    await processScore(
+      applicationId,
+      scoreDeps(vi.fn().mockResolvedValue(goodReply())).deps,
+    );
+
+    sent.length = 0;
+    const again = await confirmWith(LABELS);
+    expect(again.status).toBe(200);
+    expect(again.body.scorecard).toMatchObject({
+      status: "CONFIRMED",
+      version: 2,
+    });
+    const second = await card();
+    expect(second.version).toBe(2);
+    expect(second.confirmedAt).toEqual(first.confirmedAt);
+    expect(sent).toEqual([]);
+    expect(
+      (await scoresOf(applicationId)).map((s) => [s.scorecardVersion, s.stale]),
+    ).toEqual([
+      [1, true],
+      [2, false],
+    ]);
+  });
+
+  it("still counts a changed label or range as a new version", async () => {
+    await confirmWith(LABELS);
+    sent.length = 0;
+    expect(
+      (await confirmWith(["Java", "Spring Boot", "Kafka", "AWS"])).status,
+    ).toBe(200);
+    expect((await card()).version).toBe(3);
+  });
+
+  it("keeps the version when a saved draft is confirmed unchanged", async () => {
+    await confirmWith(LABELS);
+    const current = await card();
+    await prisma.scorecard.update({
+      where: { id: current.id },
+      data: { status: "DRAFT" },
+    });
+    sent.length = 0;
+    expect((await confirmWith(LABELS)).status).toBe(200);
+    const back = await card();
+    expect(back).toMatchObject({ status: "CONFIRMED", version: 2 });
+    expect(sent).toEqual([]);
+  });
+});
+
 // Ranked list built straight from scores, so the order rules are tested alone.
 describe("the ranked list", () => {
   async function entry(

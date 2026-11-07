@@ -20,6 +20,7 @@ import {
   reviewedScorecard,
 } from "../scripts/scoreCorpus";
 import { audit } from "../src/audit";
+import { scorecardHash } from "../src/scorecardHash";
 import { processScore, scorableCv } from "../src/score/job";
 import { readJd, truth } from "../scripts/jds";
 import { prisma } from "../src/db";
@@ -100,6 +101,14 @@ async function seedRequisitions() {
               version: 1,
               confirmedAt: new Date(),
               confirmedById: owner.id,
+              contentHash: scorecardHash({
+                criteria: extraction.scorecard.criteria,
+                experienceMinYears: extraction.scorecard.experience.minYears,
+                experienceMaxYears: extraction.scorecard.experience.maxYears,
+                noticeMaxDays: extraction.scorecard.notice.maxDays,
+                ctcMaxLpa: extraction.scorecard.ctc.maxLpa,
+                locations: extraction.scorecard.locations.values,
+              }),
             }),
             criteria: { create: criteriaRows(extraction) },
           },
