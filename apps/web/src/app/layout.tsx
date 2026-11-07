@@ -21,6 +21,9 @@ export const metadata: Metadata = {
     "Resume screening for staffing teams, with every score tied to evidence from the CV.",
 };
 
+// Lets a page wait for the API to wake on a host that limits run time.
+export const maxDuration = 60;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
