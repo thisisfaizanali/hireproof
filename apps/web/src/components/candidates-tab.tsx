@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import type {
-  CandidateList,
-  CandidateRow,
-  PendingDuplicate,
-  DuplicateSide,
-  ScoreResponse,
+import {
+  CONSTRAINT_LABEL,
+  type CandidateList,
+  type CandidateRow,
+  type PendingDuplicate,
+  type DuplicateSide,
+  type ScoreResponse,
 } from "@hireproof/shared";
 import { EmptyState } from "@/components/empty-state";
 import { Flag, formatPhone, notice, years } from "@/components/cv-status";
@@ -647,9 +648,29 @@ function Why({ c, requisitionId }: { c: CandidateRow; requisitionId: string }) {
 }
 
 function Flags({ c }: { c: CandidateRow }) {
-  if (!c.scanned && !c.needsReview && !c.possibleDuplicate) return null;
+  if (
+    !c.scanned &&
+    !c.needsReview &&
+    !c.possibleDuplicate &&
+    c.constraintFlags.length === 0
+  ) {
+    return null;
+  }
   return (
     <span className="flex flex-wrap gap-1.5">
+      {c.constraintFlags.map((f) => (
+        <Flag
+          key={f.text}
+          tone={f.unknown ? "muted" : "warning"}
+          title={f.text}
+        >
+          <span aria-hidden="true">
+            {CONSTRAINT_LABEL[f.kind]}
+            {f.unknown ? " unknown" : ""}
+          </span>
+          <span className="visually-hidden">{f.text}</span>
+        </Flag>
+      ))}
       {c.scanned && <Flag tone="muted">Scan</Flag>}
       {c.needsReview && <Flag tone="review">Needs review</Flag>}
       {c.possibleDuplicate && <Flag tone="warning">Possible duplicate</Flag>}

@@ -536,6 +536,36 @@ describe("the ranked list", () => {
     expect(res.body.progress).toEqual({ scored: 6, total: 7 });
   });
 
+  it("carries the notice, CTC and location flags on each row", async () => {
+    const strong = (await list()).body.items[0] as { applicationId: string };
+    await prisma.candidateScore.updateMany({
+      where: { applicationId: strong.applicationId },
+      data: {
+        flags: [
+          "Notice 90 days, role allows 60.",
+          "Expected CTC is not stated.",
+          "Based in Pune, role is in Noida.",
+          "Scored without AI. Check the evidence before relying on it.",
+        ],
+      },
+    });
+    const rows = (await list()).body.items;
+    expect(rows[0].constraintFlags).toEqual([
+      {
+        kind: "NOTICE",
+        unknown: false,
+        text: "Notice 90 days, role allows 60.",
+      },
+      { kind: "CTC", unknown: true, text: "Expected CTC is not stated." },
+      {
+        kind: "LOCATION",
+        unknown: false,
+        text: "Based in Pune, role is in Noida.",
+      },
+    ]);
+    expect(rows[1].constraintFlags).toEqual([]);
+  });
+
   it("filters by band, unscored and stage", async () => {
     expect(
       names((await list(recruiter.cookie, "?band=STRONG")).body),

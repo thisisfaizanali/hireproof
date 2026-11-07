@@ -24,9 +24,11 @@ export function CvStatusLabel({ status }: { status: CvStatus }) {
 
 export function Flag({
   tone,
+  title,
   children,
 }: {
   tone: "review" | "warning" | "muted";
+  title?: string;
   children: React.ReactNode;
 }) {
   const colours = {
@@ -34,7 +36,11 @@ export function Flag({
     warning: "bg-warning-soft text-warning",
     muted: "bg-muted text-foreground",
   }[tone];
-  return <span className={`${base} ${colours}`}>{children}</span>;
+  return (
+    <span className={`${base} ${colours}`} title={title}>
+      {children}
+    </span>
+  );
 }
 
 // Phones are stored as ten digits.

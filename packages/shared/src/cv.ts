@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ScoreState, ScoreSummary } from "./score";
+import type { ConstraintFlag, ScoreState, ScoreSummary } from "./score";
 
 export const CV_LIMITS = {
   fileBytes: 10 * 1024 * 1024,
@@ -104,6 +104,7 @@ export interface CandidateRow {
   // Null until the requisition has a confirmed scorecard.
   rank: number | null;
   score: ScoreSummary | null;
+  constraintFlags: ConstraintFlag[];
   scoreState: ScoreState | null;
   cvId: string | null;
 }

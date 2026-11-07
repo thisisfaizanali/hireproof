@@ -5,6 +5,7 @@ import {
   ResolveDuplicateInput,
   STAGE_FILTERS,
   canonicalSkill,
+  constraintFlags,
   type CandidateDetail,
   type CandidateList,
   type CandidateRow,
@@ -240,6 +241,7 @@ candidates.get(
         possibleDuplicate: c.duplicateLinks.length > 0 || flagged.has(c.id),
         rank: score ? first + i + 1 : null,
         score: score ? toSummary(score) : null,
+        constraintFlags: score ? constraintFlags(score.flags) : [],
         scoreState:
           version === null
             ? null
