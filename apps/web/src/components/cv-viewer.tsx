@@ -12,8 +12,13 @@ import {
   type CvText,
   type RejectReason,
   type ScoreResponse,
+  type Stage,
 } from "@hireproof/shared";
 import { EmptyState } from "@/components/empty-state";
+import {
+  PipelineActions,
+  clientDecisionText,
+} from "@/components/pipeline-actions";
 import {
   BandLabel,
   STAGE_LABEL,
@@ -445,13 +450,31 @@ function Decision({
       </h2>
       <p className="text-sm">
         Stage: <span className="font-medium">{stage}</span>
-        {info.stage === "REJECTED" && (
+        {info.stage === "REJECTED" && !info.clientRejection && (
           <>
             , {rejectLabel(info.rejectReason)}
             {info.rejectNote ? `: ${info.rejectNote}` : ""}
           </>
         )}
       </p>
+      {info.clientRejection && (
+        <p className="text-sm font-medium">
+          {clientDecisionText(info.clientRejection)}
+        </p>
+      )}
+      {info.submissionNote && info.stage !== "SCREENED" && (
+        <p className="text-sm">
+          <span className="font-medium">Note to client:</span>{" "}
+          {info.submissionNote}
+        </p>
+      )}
+      {canDecide && (
+        <PipelineActions
+          applicationId={info.id}
+          stage={info.stage as Stage}
+          onChanged={onChanged}
+        />
+      )}
       {problem && (
         <p
           role="alert"
@@ -537,15 +560,18 @@ function Decision({
         </form>
       )}
 
-      {canDecide && info.stage === "REJECTED" && (
-        <Button
-          variant="outline"
-          disabled={busy}
-          onClick={() => void send("reopen")}
-        >
-          Move back to sourced
-        </Button>
-      )}
+      {canDecide &&
+        info.stage === "REJECTED" &&
+        !info.clientRejection &&
+        info.submissionNote === null && (
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() => void send("reopen")}
+          >
+            Move back to sourced
+          </Button>
+        )}
 
       {!canDecide && (
         <p className="text-sm text-muted-foreground">

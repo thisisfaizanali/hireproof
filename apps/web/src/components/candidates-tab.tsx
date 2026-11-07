@@ -3,16 +3,24 @@
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
+  STAGE_STRIP,
   type CandidateList,
   type CandidateRow,
   type PendingDuplicate,
   type DuplicateSide,
   type ScoreResponse,
+  type Stage,
 } from "@hireproof/shared";
 import { ConstraintFlagList } from "@/components/constraint-flags";
 import { EmptyState } from "@/components/empty-state";
 import { Flag, formatPhone, notice, years } from "@/components/cv-status";
 import { CvUpload } from "@/components/cv-upload";
+import {
+  Outbox,
+  PipelineActions,
+  ProposedTimes,
+  clientDecisionText,
+} from "@/components/pipeline-actions";
 import {
   BandLabel,
   STAGE_LABEL,
@@ -75,7 +83,11 @@ export function CandidatesTab({
         version={version}
         onResolved={() => setVersion((v) => v + 1)}
       />
-      <CandidateTable requisitionId={requisitionId} version={version} />
+      <CandidateTable
+        requisitionId={requisitionId}
+        version={version}
+        canEdit={canEdit}
+      />
     </div>
   );
 }
@@ -88,21 +100,16 @@ const BANDS = [
   ["UNSCORED", "Not scored yet"],
 ] as const;
 
-const STAGES = [
-  ["", "All stages"],
-  ["SOURCED", "Sourced"],
-  ["SCREENED", "Screened"],
-  ["REJECTED", "Not a fit"],
-] as const;
-
 const PENDING = ["WAITING", "SCORING", "RESCORING"];
 
 function CandidateTable({
   requisitionId,
   version,
+  canEdit,
 }: {
   requisitionId: string;
   version: number;
+  canEdit: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [typed, setTyped] = useState("");
@@ -114,6 +121,9 @@ function CandidateTable({
   const [attempt, setAttempt] = useState(0);
   const [tick, setTick] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
+  const refresh = useCallback(() => setTick((n) => n + 1), []);
+  // The strip keeps the last counts while a filter reloads the list.
+  const [counts, setCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -134,6 +144,7 @@ function CandidateTable({
       `/api/requisitions/${requisitionId}/candidates?${params}`,
     ).then((res) => {
       if (!current) return;
+      if (res.ok) setCounts(res.data.stageCounts);
       setLoad((prev) =>
         res.ok
           ? { state: "ready", list: res.data }
@@ -191,6 +202,34 @@ function CandidateTable({
         </p>
       )}
 
+      <div
+        role="group"
+        aria-label="Filter by stage"
+        className="flex flex-wrap gap-1.5"
+      >
+        <StageButton
+          label="All"
+          count={Object.values(counts).reduce((n, c) => n + c, 0)}
+          on={stage === ""}
+          onClick={() => {
+            setStage("");
+            setPage(1);
+          }}
+        />
+        {STAGE_STRIP.map(([value, label]) => (
+          <StageButton
+            key={value}
+            label={label}
+            count={counts[value] ?? 0}
+            on={stage === value}
+            onClick={() => {
+              setStage(stage === value ? "" : value);
+              setPage(1);
+            }}
+          />
+        ))}
+      </div>
+
       <form
         role="search"
         onSubmit={(e) => e.preventDefault()}
@@ -225,23 +264,6 @@ function CandidateTable({
             </Select>
           </div>
         )}
-        <div className="flex w-full flex-col gap-1 sm:w-40">
-          <FieldLabel htmlFor="candidate-stage">Stage</FieldLabel>
-          <Select
-            id="candidate-stage"
-            value={stage}
-            onChange={(e) => {
-              setStage(e.target.value);
-              setPage(1);
-            }}
-          >
-            {STAGES.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
-        </div>
         <div className="flex w-full flex-col gap-1 sm:w-52">
           <FieldLabel htmlFor="candidate-status">Show</FieldLabel>
           <Select
@@ -388,7 +410,7 @@ function CandidateTable({
                       </Link>
                       {c.stage !== "SOURCED" && (
                         <span className="block text-xs font-normal text-muted-foreground">
-                          {STAGE_LABEL[c.stage] ?? c.stage}
+                          {stageLine(c)}
                         </span>
                       )}
                     </td>
@@ -408,6 +430,13 @@ function CandidateTable({
                       <Flags c={c} />
                     </td>
                   </tr>
+                  {hasWorkflow(c, canEdit) && (
+                    <tr className="border-b border-border">
+                      <td colSpan={9} className="pb-3">
+                        <Workflow c={c} canEdit={canEdit} onChanged={refresh} />
+                      </td>
+                    </tr>
+                  )}
                   {open === c.applicationId && (
                     <tr className="border-b border-border bg-card">
                       <td colSpan={9} className="px-4 py-4">
@@ -480,10 +509,13 @@ function CandidateTable({
                   </span>
                   {c.stage !== "SOURCED" && (
                     <span className="text-sm text-muted-foreground">
-                      {STAGE_LABEL[c.stage] ?? c.stage}
+                      {stageLine(c)}
                     </span>
                   )}
                   <Flags c={c} />
+                  {hasWorkflow(c, canEdit) && (
+                    <Workflow c={c} canEdit={canEdit} onChanged={refresh} />
+                  )}
                   {open === c.applicationId && (
                     <div className="mt-2 border-t border-border pt-3">
                       <Why c={c} requisitionId={requisitionId} />
@@ -528,6 +560,88 @@ function CandidateTable({
         </>
       )}
     </section>
+  );
+}
+
+const stageLine = (c: CandidateRow) =>
+  c.clientRejection
+    ? clientDecisionText(c.clientRejection)
+    : c.awaitingClient
+      ? "Submitted, awaiting the client"
+      : (STAGE_LABEL[c.stage] ?? c.stage);
+
+function StageButton({
+  label,
+  count,
+  on,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  on: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={`flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors duration-(--dur-micro) pointer-coarse:h-11 ${
+        on
+          ? "border-transparent bg-primary-soft"
+          : "border-input bg-card hover:bg-accent"
+      }`}
+    >
+      {label}
+      <span className="num">{count}</span>
+    </button>
+  );
+}
+
+const ACTIVE: Stage[] = ["SCREENED", "SUBMITTED", "INTERVIEW", "OFFERED"];
+
+const hasWorkflow = (c: CandidateRow, canEdit: boolean) =>
+  (canEdit && ACTIVE.includes(c.stage as Stage)) ||
+  c.stage === "SUBMITTED" ||
+  c.clientRejection !== null ||
+  c.slots.length > 0 ||
+  c.messages.length > 0;
+
+// What happened after screening: the note, the client's answer, their
+// proposed times, the recorded messages and the recruiter's next step.
+function Workflow({
+  c,
+  canEdit,
+  onChanged,
+}: {
+  c: CandidateRow;
+  canEdit: boolean;
+  onChanged: () => void;
+}) {
+  const stage = c.stage as Stage;
+  return (
+    <div className="flex max-w-3xl flex-col gap-2 pt-2">
+      {c.submissionNote && stage !== "SCREENED" && (
+        <p className="text-sm">
+          <span className="font-medium">Note to client:</span>{" "}
+          {c.submissionNote}
+        </p>
+      )}
+      <ProposedTimes
+        applicationId={c.applicationId}
+        slots={c.slots}
+        canEdit={canEdit}
+        onChanged={onChanged}
+      />
+      <Outbox messages={c.messages} />
+      {canEdit && (
+        <PipelineActions
+          applicationId={c.applicationId}
+          stage={stage}
+          onChanged={onChanged}
+        />
+      )}
+    </div>
   );
 }
 
