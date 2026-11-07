@@ -2,7 +2,14 @@ import bcrypt from "bcryptjs";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { DEMO_USERS, parseIst, type AiOutcome } from "@hireproof/shared";
+import {
+  CONSENT_NOTICE_VERSION,
+  DEMO_USERS,
+  addDays,
+  parseIst,
+  weekStartOf,
+  type AiOutcome,
+} from "@hireproof/shared";
 import { rulesScorecard } from "../src/ai/rules";
 import { aiProfile } from "../src/cv/aiProfile";
 import { persistParsed } from "../src/cv/job";
@@ -19,6 +26,8 @@ import {
   readScoreFixture,
   reviewedScorecard,
 } from "../scripts/scoreCorpus";
+import { eraseCandidate } from "../src/erasure";
+import { weekInsights } from "../src/insights";
 import { interviewInvite } from "../src/messages";
 import { scorecardHash } from "../src/scorecardHash";
 import { processScore, scorableCv } from "../src/score/job";
@@ -118,6 +127,14 @@ async function seedRequisitions() {
   }
 }
 
+const CONSENT_SOURCE: Record<
+  string,
+  "JOB_PORTAL" | "AGENCY_DATABASE" | "REFERRAL"
+> = {
+  "kestrel-senior-java": "JOB_PORTAL",
+  "sahyadri-kyc-analyst": "AGENCY_DATABASE",
+};
+
 // The brief names three candidates; their codes are fixed so the demo matches it.
 const BRIEF_CODES = new Set(["CND-91022", "CND-91047", "CND-91088"]);
 
@@ -153,11 +170,17 @@ async function seedCandidates() {
     const pool = poolFor(jd.key);
     if (pool.length === 0) continue;
 
+    // The CVs came in two weeks ago, each batch from its own source.
+    const arrived = ago(14, 9);
+    const consentSource = CONSENT_SOURCE[jd.key] ?? "REFERRAL";
     const batch = await prisma.uploadBatch.create({
       data: {
         requisitionId: requisition.id,
         uploadedById: requisition.ownerId,
         expectedCount: pool.length,
+        consentSource,
+        consentAt: arrived,
+        createdAt: arrived,
       },
     });
     for (const cv of pool) {
@@ -189,6 +212,16 @@ async function seedCandidates() {
           sizeBytes: bytes.length,
           sha256: createHash("sha256").update(bytes).digest("hex"),
           data: new Uint8Array(bytes),
+          createdAt: arrived,
+          consent: {
+            create: {
+              basis: "APPLIED_OR_AGREED",
+              source: consentSource,
+              attestedById: requisition.ownerId,
+              attestedAt: arrived,
+              noticeVersion: CONSENT_NOTICE_VERSION,
+            },
+          },
         },
       });
       await persistParsed(row, parsed);
@@ -495,7 +528,7 @@ async function shortlist(clientUserId: string, item: Ranked, when: Date) {
     "CLIENT_SHORTLISTED",
     "Application",
     item.app.id,
-    { requisitionId: item.app.requisitionId },
+    { requisitionId: item.app.requisitionId, ...bandMeta(item) },
     when,
   );
 }
@@ -661,7 +694,7 @@ async function seedClientActivity() {
     "CLIENT_REJECTED",
     "Application",
     k[1].app.id,
-    { requisitionId: kestrel.id, reason: "NOTICE_PERIOD" },
+    { requisitionId: kestrel.id, reason: "NOTICE_PERIOD", ...bandMeta(k[1]) },
     ago(5, 10),
   );
   await shortlist(priya.id, k[2], ago(2, 12));
@@ -752,6 +785,450 @@ async function seedClientActivity() {
   await clientView(arjun.id, s[2], ago(0, 7));
 }
 
+const rulesOnly = {
+  ai: async () => ({
+    verdicts: null,
+    run: {
+      model: "rules",
+      outcome: "NOT_CONFIGURED" as const,
+      latencyMs: 0,
+      inputTokens: null,
+      outputTokens: null,
+      errorMessage: null,
+    },
+  }),
+};
+
+async function reject(
+  item: Ranked,
+  recruiterId: string,
+  reason: "SKILLS_GAP" | "EXPERIENCE" | "NOTICE_PERIOD" | "CTC" | "OTHER",
+  when: Date,
+) {
+  await prisma.application.update({
+    where: { id: item.app.id },
+    data: {
+      stage: "REJECTED",
+      rejectedBy: "RECRUITER",
+      rejectReason: reason,
+      decidedById: recruiterId,
+      decidedAt: when,
+    },
+  });
+  await event(
+    recruiterId,
+    "APPLICATION_REJECTED",
+    "Application",
+    item.app.id,
+    { ...bandMeta(item), reason, fromStage: "SOURCED" },
+    when,
+  );
+}
+
+// A decision on a candidate whose requisition has no scorecard yet.
+async function screenUnscored(
+  applicationId: string,
+  recruiterId: string,
+  when: Date,
+) {
+  const app = await prisma.application.findUniqueOrThrow({
+    where: { id: applicationId },
+  });
+  const cv = await scorableCv(app.candidateId);
+  if (!cv) return;
+  await event(
+    recruiterId,
+    "CV_VIEWED",
+    "CvDocument",
+    cv.id,
+    { candidateId: app.candidateId, requisitionId: app.requisitionId },
+    new Date(when.getTime() - 5 * 60_000),
+  );
+  await prisma.application.update({
+    where: { id: app.id },
+    data: { stage: "SCREENED", decidedById: recruiterId, decidedAt: when },
+  });
+  await event(
+    recruiterId,
+    "APPLICATION_SCREENED",
+    "Application",
+    app.id,
+    { band: null, cvId: cv.id },
+    when,
+  );
+}
+
+const VERDICTS = [
+  "BOTH_REASONABLE",
+  "AI_RIGHT",
+  "AI_RIGHT",
+  "RECRUITER_RIGHT",
+  "AI_RIGHT",
+  "BOTH_REASONABLE",
+  "AI_RIGHT",
+  "RECRUITER_RIGHT",
+  "AI_RIGHT",
+  "AI_RIGHT",
+] as const;
+const NOTES = [
+  "Notice period decided it. Fair call.",
+  null,
+  null,
+  "The recruiter spoke to the candidate. The CV undersells the Kafka work.",
+  null,
+  "The score leans on the skills list. Worth checking the quotes.",
+] as const;
+
+// Two weeks of work for the delivery head to read: decisions on both sides of
+// the AI, reviews of last week's sample and part of this week's, a mix of AI
+// outcomes, one erasure and two candidates past their retention date.
+async function seedInsightHistory() {
+  if ((await prisma.sampleReview.count()) > 0) return;
+  const get = (email: string) =>
+    prisma.user.findUniqueOrThrow({ where: { email } });
+  const [head, priya, arjun, ananya, rohan] = await Promise.all([
+    get("vikram.rao@hireproof.test"),
+    get("priya.nair@kestrelinfotech.test"),
+    get("arjun.kulkarni@sahyadrifinserv.test"),
+    get("ananya.sharma@hireproof.test"),
+    get("rohan.mehta@hireproof.test"),
+  ]);
+  const byFile = (file: string) =>
+    prisma.requisition.findFirst({
+      where: { jdFileName: file },
+      include: { owner: true },
+    });
+  const marigoldFile = truth
+    .find((j) => j.key === "marigold-store-ops")!
+    .file.split("/")
+    .pop()!;
+  const [kestrel, sahyadri, marigold] = await Promise.all([
+    byFile("Kestrel_Senior_Java_Developer_JD.docx"),
+    byFile("Sahyadri_Finserv_KYC_Analyst_JD.pdf"),
+    byFile(marigoldFile),
+  ]);
+  if (!kestrel || !sahyadri || !marigold) return;
+
+  const thisWeek = weekStartOf(new Date());
+  const lastWeek = addDays(thisWeek, -7);
+  // Never later than a little before now, so a Monday run stays in the past.
+  const at = (week: string, day: number, time: string, jitter = 0) =>
+    new Date(
+      Math.min(
+        parseIst(`${addDays(week, day)}T${time}`)!.getTime(),
+        Date.now() - (30 + jitter) * 60_000,
+      ),
+    );
+
+  // Three Weak matches are scored again with rules, as happens when the model
+  // is down.
+  const weakSourced = (await ranked(kestrel.id)).filter(
+    (r) => r.app.stage === "SOURCED" && r.score.band === "WEAK",
+  );
+  for (const item of weakSourced.slice(-3)) {
+    await processScore(item.app.id, rulesOnly, true);
+  }
+
+  const pool = async (requisitionId: string) => {
+    const rows = (await ranked(requisitionId)).filter(
+      (r) => r.app.stage === "SOURCED",
+    );
+    const take = (band: "STRONG" | "POSSIBLE" | "WEAK") =>
+      rows.filter((r) => r.score.band === band);
+    return {
+      strong: take("STRONG"),
+      possible: take("POSSIBLE"),
+      weak: take("WEAK"),
+    };
+  };
+  const k = await pool(kestrel.id);
+  const s = await pool(sahyadri.id);
+
+  // When the CVs arrived. Kestrel and Sahyadri came in last Monday; five more
+  // Kestrel CVs arrived by referral on Monday this week, in a batch of their
+  // own with its own consent. Marigold's came a week earlier.
+  const first = at(lastWeek, 0, "09:00");
+  const second = at(thisWeek, 0, "09:00", 60);
+  const tranche = [k.strong[3], k.possible[3], k.weak[4], k.weak[5], k.weak[6]];
+  const trancheIds = tranche.map((t) => t.app.id);
+  const trancheCandidates = tranche.map((t) => t.app.candidateId);
+  const batch = await prisma.uploadBatch.create({
+    data: {
+      requisitionId: kestrel.id,
+      uploadedById: ananya.id,
+      expectedCount: tranche.length,
+      consentSource: "REFERRAL",
+      consentAt: second,
+      createdAt: second,
+    },
+  });
+  await prisma.cvDocument.updateMany({
+    where: {
+      candidateId: { in: trancheCandidates },
+      requisitionId: kestrel.id,
+    },
+    data: { batchId: batch.id, createdAt: second },
+  });
+  await prisma.consentRecord.updateMany({
+    where: { candidateId: { in: trancheCandidates } },
+    data: { source: "REFERRAL", attestedAt: second },
+  });
+  await prisma.application.updateMany({
+    where: { id: { in: trancheIds } },
+    data: { createdAt: second },
+  });
+  for (const requisition of [kestrel, sahyadri]) {
+    await prisma.application.updateMany({
+      where: { requisitionId: requisition.id, id: { notIn: trancheIds } },
+      data: { createdAt: first },
+    });
+    await prisma.cvDocument.updateMany({
+      where: {
+        requisitionId: requisition.id,
+        candidateId: { notIn: trancheCandidates },
+      },
+      data: { createdAt: first },
+    });
+    await prisma.consentRecord.updateMany({
+      where: {
+        cv: { requisitionId: requisition.id },
+        candidateId: { notIn: trancheCandidates },
+      },
+      data: { attestedAt: first },
+    });
+    await prisma.uploadBatch.updateMany({
+      where: { requisitionId: requisition.id, id: { not: batch.id } },
+      data: { createdAt: first, consentAt: first },
+    });
+  }
+  const earlier = at(addDays(lastWeek, -7), 0, "09:00");
+  await prisma.application.updateMany({
+    where: { requisitionId: marigold.id },
+    data: { createdAt: earlier },
+  });
+  await prisma.cvDocument.updateMany({
+    where: { requisitionId: marigold.id },
+    data: { createdAt: earlier },
+  });
+  await prisma.consentRecord.updateMany({
+    where: { cv: { requisitionId: marigold.id } },
+    data: { attestedAt: earlier },
+  });
+  await prisma.uploadBatch.updateMany({
+    where: { requisitionId: marigold.id },
+    data: { createdAt: earlier, consentAt: earlier },
+  });
+
+  // Last week.
+  const L = (day: number, time: string, jitter = 0) =>
+    at(lastWeek, day, time, jitter);
+  await screen(k.strong[0], ananya.id, L(0, "10:20"));
+  await screen(k.strong[1], ananya.id, L(0, "11:05"));
+  await reject(k.strong[2], ananya.id, "NOTICE_PERIOD", L(1, "12:10"));
+  await screen(k.possible[0], ananya.id, L(1, "15:30"));
+  await screen(k.possible[1], ananya.id, L(2, "10:45"));
+  await reject(k.possible[2], ananya.id, "SKILLS_GAP", L(2, "16:15"));
+  await reject(k.weak[0], ananya.id, "SKILLS_GAP", L(3, "10:05"));
+  await reject(k.weak[1], ananya.id, "EXPERIENCE", L(3, "10:40"));
+  await reject(k.weak[2], ananya.id, "SKILLS_GAP", L(3, "11:20"));
+  await screen(k.weak[3], ananya.id, L(3, "14:00"));
+  await submit(k.weak[3], "java", 2, ananya.id, L(4, "11:30"));
+  await screen(s.strong[0], rohan.id, L(0, "14:10"));
+  await screen(s.strong[1], rohan.id, L(1, "09:40"));
+  await reject(s.strong[2], rohan.id, "EXPERIENCE", L(2, "13:25"));
+  await screen(s.possible[0], rohan.id, L(2, "15:05"));
+  await screen(s.possible[1], rohan.id, L(4, "10:15"));
+  const marigoldApps = await prisma.application.findMany({
+    where: { requisitionId: marigold.id, stage: "SOURCED" },
+    orderBy: { id: "asc" },
+  });
+  await screenUnscored(marigoldApps[0].id, ananya.id, L(1, "17:00"));
+  await screenUnscored(marigoldApps[1].id, ananya.id, L(2, "17:20"));
+
+  // This week.
+  const T = (day: number, time: string, jitter = 0) =>
+    at(thisWeek, day, time, jitter);
+  await shortlist(priya.id, k.weak[3], T(0, "12:30", 3));
+  await screen(k.strong[3], ananya.id, T(0, "10:10", 6));
+  await screen(k.possible[3], ananya.id, T(0, "11:40", 9));
+  await reject(k.weak[4], ananya.id, "SKILLS_GAP", T(1, "10:30", 12));
+  await reject(k.weak[5], ananya.id, "EXPERIENCE", T(1, "11:10", 15));
+  await screen(k.weak[6], ananya.id, T(1, "15:45", 18));
+  await reject(s.strong[3], rohan.id, "OTHER", T(0, "15:20", 21));
+  await screen(s.possible[2], rohan.id, T(1, "09:50", 24));
+  await screen(s.possible[3], rohan.id, T(1, "12:05", 27));
+
+  // The sample: last week's reviewed in full, this week's in part.
+  const review = async (
+    week: string,
+    reviewedAt: Date,
+    count: number | null,
+  ) => {
+    const { sample } = await weekInsights(week, thisWeek);
+    const items = count === null ? sample.items : sample.items.slice(0, count);
+    for (const [i, item] of items.entries()) {
+      await prisma.sampleReview.create({
+        data: {
+          weekStart: new Date(`${week}T00:00:00Z`),
+          applicationId: item.applicationId,
+          verdict: VERDICTS[i % VERDICTS.length],
+          note: NOTES[i % NOTES.length],
+          reviewedById: head.id,
+          reviewedAt: new Date(reviewedAt.getTime() + i * 4 * 60_000),
+          band: item.band,
+          decision: item.action,
+          requisitionNumber: item.requisitionNumber,
+        },
+      });
+    }
+  };
+  await review(lastWeek, at(thisWeek, 0, "11:00"), null);
+  const open = (await weekInsights(thisWeek, thisWeek)).sample.items.length;
+  await review(
+    thisWeek,
+    at(thisWeek, 1, "09:20", 30),
+    Math.max(1, Math.min(4, open - 1)),
+  );
+
+  // AI outcomes. Kestrel was scored last week; Sahyadri's trouble and the
+  // rescoring with rules fall in this one.
+  const lastTuesday = at(lastWeek, 1, "09:30");
+  await prisma.candidateScore.updateMany({
+    where: { application: { requisitionId: kestrel.id }, source: "AI" },
+    data: { createdAt: lastTuesday },
+  });
+  await prisma.aiRun.updateMany({
+    where: { requisitionId: kestrel.id, kind: "CV_SCORE", outcome: "OK" },
+    data: { createdAt: lastTuesday },
+  });
+  await prisma.aiRun.updateMany({
+    where: { kind: "CV_PARSE" },
+    data: { createdAt: first },
+  });
+  const model = "openai/gpt-oss-120b";
+  await prisma.aiRun.createMany({
+    data: [
+      {
+        kind: "CV_SCORE",
+        requisitionId: kestrel.id,
+        model,
+        outcome: "RETRIED_OK",
+        latencyMs: 9400,
+        inputTokens: 2310,
+        outputTokens: 640,
+        createdAt: at(lastWeek, 1, "09:41"),
+      },
+      {
+        kind: "CV_SCORE",
+        requisitionId: kestrel.id,
+        model,
+        outcome: "INVALID_OUTPUT",
+        latencyMs: 6100,
+        inputTokens: 2290,
+        outputTokens: 120,
+        errorMessage: "The reply was not valid JSON",
+        createdAt: at(lastWeek, 1, "09:52"),
+      },
+      {
+        kind: "CV_SCORE",
+        requisitionId: sahyadri.id,
+        model,
+        outcome: "PROVIDER_ERROR",
+        latencyMs: 800,
+        errorMessage: "The provider returned 429 (rate limit)",
+        createdAt: at(thisWeek, 1, "10:02", 33),
+      },
+      {
+        kind: "CV_SCORE",
+        requisitionId: sahyadri.id,
+        model,
+        outcome: "PROVIDER_ERROR",
+        latencyMs: 790,
+        errorMessage: "The provider returned 429 (rate limit)",
+        createdAt: at(thisWeek, 1, "10:03", 34),
+      },
+    ],
+  });
+
+  // One erasure on request, and two candidates left untouched for over a year.
+  const rest = marigoldApps.slice(2);
+  const erased = await eraseCandidate({
+    candidateId: rest[rest.length - 1].candidateId,
+    reason: "CANDIDATE_REQUEST",
+    actorId: head.id,
+  });
+  if (erased) {
+    const when = ago(3, 11);
+    await prisma.deletionRecord.updateMany({ data: { deletedAt: when } });
+    await prisma.auditEvent.updateMany({
+      where: { action: "CANDIDATE_DELETED" },
+      data: { createdAt: when },
+    });
+  }
+  const monthsAgo = (n: number) => {
+    const d = new Date();
+    d.setUTCMonth(d.getUTCMonth() - n);
+    return d;
+  };
+  for (const [i, app] of rest.slice(0, 2).entries()) {
+    const when = monthsAgo(14 + i * 3);
+    await prisma.candidate.update({
+      where: { id: app.candidateId },
+      data: { lastActivityAt: when },
+    });
+    await prisma.cvDocument.updateMany({
+      where: { candidateId: app.candidateId },
+      data: { createdAt: when },
+    });
+    await prisma.consentRecord.updateMany({
+      where: { candidateId: app.candidateId },
+      data: { attestedAt: when },
+    });
+  }
+
+  // Sign-ins across both weeks, and an address on everything that has none.
+  const ips: [string, string][] = [
+    [ananya.id, "203.0.113.24"],
+    [rohan.id, "203.0.113.31"],
+    [head.id, "198.51.100.12"],
+    [priya.id, "192.0.2.77"],
+  ];
+  for (const [week, day] of [
+    [lastWeek, 0],
+    [lastWeek, 2],
+    [lastWeek, 4],
+    [thisWeek, 0],
+    [thisWeek, 1],
+  ] as const) {
+    for (const [i, [id, ip]] of ips.entries()) {
+      await prisma.auditEvent.create({
+        data: {
+          actorId: id,
+          action: "LOGIN_SUCCEEDED",
+          entityType: "User",
+          entityId: id,
+          ip,
+          createdAt: at(
+            week,
+            day,
+            `${String(8 + i).padStart(2, "0")}:${10 + i * 7}`,
+            i,
+          ),
+        },
+      });
+    }
+  }
+  for (const [id, ip] of [
+    ...ips,
+    [arjun.id, "192.0.2.91"] as [string, string],
+  ]) {
+    await prisma.auditEvent.updateMany({
+      where: { actorId: id, ip: null },
+      data: { ip },
+    });
+  }
+}
+
 async function main() {
   const password = process.env.SEED_DEMO_PASSWORD;
   if (!password || password.length < 8) {
@@ -784,6 +1261,7 @@ async function main() {
   await seedScores();
   await seedDecisions();
   await seedClientActivity();
+  await seedInsightHistory();
 
   console.table(
     DEMO_USERS.map(({ email, role, client }) => ({
