@@ -217,6 +217,8 @@ How to read the number:
 
 The value was worked out from published behaviour, because the hosted stack cannot be reached from the repository, so the smoke test (step 5) and the comparison with your own address are what confirm it. The setting is read as a hop count (`TRUST_PROXY`, default `1`, which is correct for one proxy such as the local Docker setup).
 
+The value only affects which address the audit log records and the per-address limit on failed sign-ins. Password guessing is also capped per account (5 failures per email in 15 minutes), so a wrong hop count or a forged header cannot get around it.
+
 Running the whole product locally with `docker compose` is different: the Next server there forwards requests without adding the visitor's address, so the API sees the web container's address for everyone. That only affects the local audit log and is why the smoke test does not check the address when the web address is `localhost`.
 
 ## Cookies and headers

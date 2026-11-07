@@ -182,6 +182,10 @@ These are for the delivery head. A recruiter or a hiring manager gets 403 from e
 
 **Erasure.** From the profile the delivery head chooses a reason (candidate request, retention period ended, uploaded by mistake) and types the candidate code. One transaction removes the CVs and files, parsed profile, scores, applications, interview times, messages, consent records and duplicate links, writes a `DeletionRecord` (code, reason, who, when and counts) and audits `CANDIDATE_DELETED`. Earlier audit events stay; they hold ids and codes only. A client who had the candidate no longer sees them. Queued parse and score jobs hold only ids, so a job for erased data finds nothing and stops, and a job already running checks that its rows still exist before it writes. A test searches every text, varchar and jsonb column of every table, read from `information_schema`, for the erased candidate's name, email and phone.
 
+## Security notes
+
+Failed sign-ins are limited twice: 10 per address and 5 per account (email) in 15 minutes, so forging the client address cannot be used to guess a password. Successful sign-ins do not count.
+
 ## Demo accounts
 
 The seed creates three fictional client companies and five users. Every user signs in with the value of `SEED_DEMO_PASSWORD`.
