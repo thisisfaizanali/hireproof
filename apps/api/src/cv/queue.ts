@@ -7,9 +7,9 @@ import { setScoreSender, type ScoreJob } from "../score/trigger";
 
 const QUEUE = "cv-parse";
 const SCORE_QUEUE = "cv-score";
-// Extraction and OCR are the heavy steps; two at a time keeps one small server
-// responsive. The LLM calls behind them go through one shared throttle.
-const CONCURRENCY = 2;
+// Extraction and OCR are the heavy steps, so how many run at once is set by
+// CV_CONCURRENCY. The LLM calls behind them go through one shared throttle.
+const CONCURRENCY = env.CV_CONCURRENCY;
 
 // pg-boss runs inside the API process so there is one service to deploy. Move
 // it to a separate worker process when upload volume needs it.

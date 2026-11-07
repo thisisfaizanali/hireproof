@@ -327,12 +327,10 @@ describe("the audit log", () => {
     await request(app)
       .post("/api/auth/login")
       .send({ email: recruiter.user.email, password: "wrong-password" });
-    await request(app)
-      .post("/api/auth/login")
-      .send({
-        email: "nobody.at.all@example.test",
-        password: "wrong-password",
-      });
+    await request(app).post("/api/auth/login").send({
+      email: "nobody.at.all@example.test",
+      password: "wrong-password",
+    });
     const page = await log("?action=LOGIN_FAILED");
     expect(page.rows.map((r) => r.sentence).sort()).toEqual([
       "Failed sign-in to Test RECRUITER's account",
