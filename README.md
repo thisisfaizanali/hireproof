@@ -2,7 +2,7 @@
 
 Hireproof is a resume screening tool for staffing firms. Recruiters create a job requisition, the AI extracts a scorecard from the job description, and recruiters bulk-upload CVs. Each CV is scored against the scorecard with evidence quoted from the CV. Recruiters then submit candidates to a client portal, and a pipeline tracks each requisition.
 
-This repository holds the foundation (sign-in, role-based shells, API, shared schemas, local database), requisitions with scorecard extraction from job descriptions, and bulk CV upload with parsing, OCR for scans and duplicate detection.
+This repository holds the foundation (sign-in, role-based shells, API, shared schemas, local database), requisitions with scorecard extraction from job descriptions, bulk CV upload with parsing, OCR for scans and duplicate detection, and evidence-backed scoring with a ranked candidate list and a CV viewer.
 
 ## Prerequisites
 
@@ -52,25 +52,27 @@ The web app runs on http://localhost:3000 and the API on http://localhost:4000. 
 
 Scorecard extraction and CV parsing use an OpenAI-compatible chat API. All the variables are optional; set them in `.env` only, never in code or tests.
 
-| Variable          | Meaning                                                                   |
-| ----------------- | ------------------------------------------------------------------------- |
-| `LLM_BASE_URL`    | API base URL. Defaults to Groq: `https://api.groq.com/openai/v1`          |
-| `LLM_API_KEY`     | The provider key                                                          |
-| `LLM_MODEL`       | Model id. List the ones your key can use with `GET {LLM_BASE_URL}/models` |
-| `LLM_PARSE_MODEL` | Model for reading CVs. Falls back to `LLM_MODEL`                          |
+| Variable          | Meaning                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------- |
+| `LLM_BASE_URL`    | API base URL. Defaults to Groq: `https://api.groq.com/openai/v1`                   |
+| `LLM_API_KEY`     | The provider key                                                                   |
+| `LLM_MODEL`       | Model id. List the ones your key can use with `GET {LLM_BASE_URL}/models`          |
+| `LLM_PARSE_MODEL` | Model for reading CVs. Recommended `openai/gpt-oss-20b`. Falls back to `LLM_MODEL` |
 
-Recommended model: `openai/gpt-oss-120b` on Groq. It accepts `json_schema` structured output and quotes the job description faithfully. The free tier allows about 8,000 tokens a minute, which is roughly three extractions a minute; a busier desk falls back to pattern matching and offers "Try AI again".
+Recommended models on Groq: `openai/gpt-oss-120b` for `LLM_MODEL` (scorecards and scoring) and `openai/gpt-oss-20b` for `LLM_PARSE_MODEL`. Each model has its own daily token budget (200,000 tokens a day for 120b on the free tier), so reading CVs with 20b leaves the 120b budget for scoring. On the 45 sample CVs the two read name, role and experience equally well. It accepts `json_schema` structured output and quotes the job description faithfully. The free tier allows about 8,000 tokens a minute, which is roughly three extractions a minute; a busier desk falls back to pattern matching and offers "Try AI again".
 
 Without a key (or model) the app skips the AI and fills the scorecard with basic pattern matching, and says so on the requisition. Every AI answer is checked in code: each quote must exist in the job description, numbers must be plausible, and nothing is final until a recruiter confirms it. Each attempt is recorded in `AiRun` (model, outcome, latency, token counts; never the job description text).
 
 Useful scripts, run from the repository root:
 
-| Script                                         | What it does                                                                                  |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `npm run eval:jd -w @hireproof/api`            | Compares extraction on `samples/jds` with the ground truth in `samples/manifest.json`         |
-| `npm run capture:scorecards -w @hireproof/api` | Runs the real model on the sample JDs and saves `apps/api/prisma/fixtures/scorecards.json`    |
-| `npm run eval:cv -w @hireproof/api`            | Parses `samples/cvs` and `samples/edge` and compares with the ground truth; prints tables     |
-| `npm run capture:cvs -w @hireproof/api`        | Runs the real CV pipeline (text, OCR, AI) and saves `apps/api/prisma/fixtures/cv-parses.json` |
+| Script                                         | What it does                                                                                                                                        |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run eval:jd -w @hireproof/api`            | Compares extraction on `samples/jds` with the ground truth in `samples/manifest.json`                                                               |
+| `npm run capture:scorecards -w @hireproof/api` | Runs the real model on the sample JDs and saves `apps/api/prisma/fixtures/scorecards.json`                                                          |
+| `npm run eval:cv -w @hireproof/api`            | Parses `samples/cvs` and `samples/edge` and compares with the ground truth; prints tables                                                           |
+| `npm run capture:cvs -w @hireproof/api`        | Runs the real CV pipeline (text, OCR, AI) and saves `apps/api/prisma/fixtures/cv-parses.json`                                                       |
+| `npm run capture:scores -w @hireproof/api`     | Runs real scoring over the sample CVs and saves `apps/api/prisma/fixtures/scores.json`. `--wait` rides out a daily token cap; finished CVs are kept |
+| `npm run eval:score -w @hireproof/api`         | Compares rankings with the expected fit in the manifest. Replays the captured scores; `--live` asks the model again. Writes nothing                 |
 
 The seed creates four requisitions from the sample JDs, using the saved fixture when it exists and pattern matching otherwise. It then loads the sample CVs into those requisitions from `cv-parses.json`, with no model call and no OCR. Without that fixture it parses the text CVs with rules only and skips the scans.
 
@@ -99,6 +101,36 @@ What happens to a CV (`apps/api/src/cv`):
 Jobs run on `pg-boss` inside the API process, so there is one service to deploy; move it to a worker process when volume needs it. Two CVs are read at a time. Every model call goes through one throttle: after each response it reads `x-ratelimit-remaining-tokens` and the reset header, waits for the reset when the budget is too low for the next call, and on a 429 waits for `retry-after` and retries up to three times before falling back to rules. Jobs survive a restart, and CVs left mid-run are queued again when the API starts.
 
 The CV files are stored in Postgres for now. Move them to object storage at real volume; deleting a candidate stays a single transaction while the bytes are here.
+
+## Scoring and evidence
+
+A confirmed scorecard ranks the candidates of its requisition. For each criterion the AI returns a verdict (met, partial or not found) and at most two short quotes from the CV. Code does the rest (`apps/api/src/score`).
+
+**Evidence first.** Every quote is looked up in the CV text that was sent to the model, ignoring case, spacing and punctuation. A met or partial verdict with no quote found becomes not found and is flagged "The AI cited text that is not in the CV". No points are ever given without a verified quote. The model only ever sees `redactedText`: no name, email or phone.
+
+**The formula** lives in one function, `computeScore`, and is shown in the page:
+
+| Part                                           | Points |
+| ---------------------------------------------- | ------ |
+| Must-haves, shared equally                     | 70     |
+| Nice-to-haves, shared equally                  | 20     |
+| Experience against the scorecard's min and max | 10     |
+
+A met criterion earns its whole share and a partial one half. Experience is full inside the range, falls in a straight line to zero two years outside it, and is half when the CV does not state it. Points a group cannot use move on: with no nice-to-haves the must-haves hold 90, with no must-haves the nice-to-haves hold 90, and with neither, experience is the whole score. The total is out of 100, rounded.
+
+**Bands.** Strong match is 75 or more with every must-have met. Possible match is 50 or more. Weak match is below 50.
+
+**Constraints are flags, not points.** Notice over the limit, expected CTC over the budget, a location outside the list, and any of those not stated are shown beside the score and never change it.
+
+**Defences.** The CV goes to the model as untrusted data between markers, with an instruction to ignore anything addressed to it. A skill that only sits in a skills list is partial at most. Both are checked against the sample corpus by `eval:score`.
+
+**Without the AI** (no key, the daily budget spent, or invalid output twice) a rules score is used and labelled "Scored without AI": a dictionary skill in a role, project or summary line is met, one that only sits in a skills list is partial, and anything else is not found. The quote is the matched line, verified the same way. Scoring never fails because of the AI.
+
+**Staleness.** Each score stores the scorecard version it used. Confirming a scorecard marks older scores stale and queues every application again; the list shows "Re-scoring" and never mixes versions in one ranking. Scoring runs on a second `pg-boss` queue (`cv-score`) behind the same throttle as parsing.
+
+**Limits.** The CV part of a prompt is capped at 6,000 characters (about 1,700 tokens), and low-value sections (hobbies, references, languages) are dropped first. A score takes about 1,400 tokens and two seconds on gpt-oss-120b, so a requisition of 45 CVs costs about 60,000 tokens, a third of a day's free budget.
+
+**Decisions.** "Mark screened" and "Not a fit" (with a reason) are audited with the AI band at the time. The server refuses "Mark screened" unless the same recruiter has a logged view of that candidate's newest CV, and the page disables the button with the same sentence. Every view of a CV, as the original or as text, is logged, including the delivery head's. The delivery head reads everything and changes nothing; hiring managers get no access yet.
 
 ## Demo accounts
 

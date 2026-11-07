@@ -81,6 +81,14 @@ Scale, ratio 1.2 from a 16px body. Body text is never smaller than 16px.
 - A possible duplicate is shown as two panels side by side, "This CV" and "Already on file", with the same rows in each so differences read across. The two actions sit under both, and "Same person" is the filled button.
 - Review reasons on the profile are a list in `review` on `review-soft`, headed by the words "Needs review".
 
+## Scoring screens
+
+- The ranked list adds a rank and a score column to the candidate table. The score is a figure in the mono face with its band in words beside it. Strong match takes the accent fill; Possible and Weak stay neutral, so colour is never the only signal.
+- "Why this score" opens under the row. It reads top to bottom: the total and must-haves met, the flags, each criterion with its verdict, points and checked quotes, then experience. A quote that is not in the CV sits on `review-soft` with the words "Not found in the CV". Constraint flags use `warning-soft`; flags about trust in the score (a rules score, an unverified quote) use `review-soft`.
+- "Scored without AI", "Re-scoring" and "Waiting to be scored" are plain words, never colour alone.
+- The CV viewer puts the original or its text on the left and the breakdown and decision on the right. Below 64rem the CV comes first and the breakdown follows. Verified quotes are marked in the text view with `primary-soft`; picking a quote in the breakdown scrolls to it and marks it with `primary`.
+- "Mark screened" is the one filled button. It is disabled until the CV is opened, and the sentence that says why stays under it.
+
 ## Voice
 
 Plain and specific, in the staffing firm's own words: requisition, shortlist, notice period, CTC. Empty states say what belongs there and what fills it, in a full sentence with a full stop. No exclamation marks, no marketing verbs.
