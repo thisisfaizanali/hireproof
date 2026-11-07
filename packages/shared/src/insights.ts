@@ -91,7 +91,9 @@ export interface AgreementRow {
 
 export interface Disagreement {
   applicationId: string;
+  candidateId: string;
   candidateCode: string;
+  requisitionId: string;
   requisitionNumber: number;
   band: Band;
   total: number | null;
@@ -100,7 +102,6 @@ export interface Disagreement {
   by: string;
   at: string;
   cvId: string | null;
-  candidateId: string;
 }
 
 export const SAMPLE_VERDICTS = [
@@ -133,8 +134,9 @@ export interface SampleItem {
   applicationId: string;
   candidateId: string;
   candidateCode: string;
+  requisitionId: string;
   requisitionNumber: number;
-  band: DecisionBand;
+  band: Band;
   total: number | null;
   action: DecisionAction;
   reason: string | null;
