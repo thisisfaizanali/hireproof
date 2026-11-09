@@ -11,6 +11,7 @@ COPY apps/api/prisma apps/api/prisma
 COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
 COPY tools/corpus/package.json tools/corpus/
+COPY tools/docs/package.json tools/docs/
 
 # Production dependencies only, which is what the runtime stage carries.
 FROM manifests AS prod-deps

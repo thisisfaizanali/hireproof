@@ -21,7 +21,8 @@
     "db:migrate": "npm run db:migrate -w @hireproof/api",
     "db:seed": "npm run db:seed -w @hireproof/api",
     "db:reset": "npm run db:reset -w @hireproof/api",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "docs:pdf": "npm run pdf -w @hireproof/docs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
