@@ -11,6 +11,7 @@ COPY apps/api/package.json apps/api/prisma.config.ts apps/api/
 COPY apps/api/prisma apps/api/prisma
 COPY packages/shared/package.json packages/shared/
 COPY tools/corpus/package.json tools/corpus/
+COPY tools/docs/package.json tools/docs/
 RUN npm ci -w @hireproof/web -w @hireproof/shared --include-workspace-root --ignore-scripts
 
 COPY tsconfig.base.json ./

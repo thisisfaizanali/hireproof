@@ -61,10 +61,10 @@ Each assumption is something we decided without being told. The last column says
 
 ```mermaid
 flowchart LR
-  B["Browser"] -->|"HTTPS, one origin"| V["Vercel<br/>Next.js app<br/>region sin1"]
-  V -->|"rewrite /api/*"| R["Render (Singapore)<br/>Express API in Docker<br/>pg-boss queue in process"]
-  R -->|"SQL over SSL, direct"| N[("Neon Postgres<br/>data and CV files")]
-  R -->|"HTTPS, JSON schema"| G["Groq<br/>gpt-oss-120b and 20b"]
+  B["Browser"] -->|"one origin"| V["Vercel<br/>Next.js"]
+  V -->|"/api rewrite"| R["Render<br/>Express API<br/>pg-boss queue"]
+  R -->|"SQL, SSL"| N[("Neon<br/>Postgres")]
+  R -->|"JSON schema"| G["Groq<br/>gpt-oss"]
 ```
 
 The browser only ever talks to the Vercel address. Vercel forwards every `/api/*` request to the API, so the session cookie belongs to the web origin and is first party. That is also what keeps sign-in working in Safari on iPhones, which drops third-party cookies, and it removes the need for CORS. The API never approves a cross-origin preflight, which later matters for CSRF (section 10).
@@ -83,54 +83,40 @@ The browser only ever talks to the Vercel address. Vercel forwards every `/api/*
 
 ## 5. Data model
 
-```mermaid
-erDiagram
-  Client ||--o{ User : employs
-  Client ||--o{ Requisition : owns
-  User ||--o{ Requisition : "owns (recruiter)"
-  User ||--o{ Session : has
-  Requisition ||--o| Scorecard : "has one"
-  Scorecard ||--o{ Criterion : lists
-  Requisition ||--o{ UploadBatch : receives
-  UploadBatch ||--o{ CvDocument : holds
-  Candidate ||--o{ CvDocument : "appears in"
-  CvDocument ||--o| ConsentRecord : "attested by"
-  CvDocument ||--o{ DuplicateLink : "flagged as"
-  Candidate ||--o{ Application : "applies as"
-  Requisition ||--o{ Application : ranks
-  Application ||--o{ CandidateScore : "scored per version"
-  Application ||--o{ InterviewSlot : proposes
-  Application ||--o{ OutboundMessage : records
-  Application ||--o{ SampleReview : "reviewed in"
-  User ||--o{ AuditEvent : acts
-  CandidateScore {
-    int scorecardVersion
-    int total
-    string band
-    json criteria "verdicts and verified quotes"
-  }
-  CvDocument {
-    bytes data "the file"
-    string redactedText "what the model sees"
-    string status
-  }
-  Application {
-    string stage
-    string rejectedBy "RECRUITER or CLIENT"
-  }
-```
-
-Three details carry most of the weight.
+The schema has 19 tables, besides the queue's own. Two diagrams show the ones that matter (interview times, mocked messages and sample reviews all hang off an application), and three details explain most of the design.
 
 - **A candidate is a person, an application is a person for a requisition.** A candidate's profile is rebuilt from their newest CV, but a field the newest CV lacks keeps its older value, so a newer CV with no CTC does not erase one. Stages, scores, interview times and messages belong to the application.
 - **A score belongs to a scorecard version.** `CandidateScore` is unique per application and version, so re-scoring after a scorecard change adds a row and old rows are marked stale. A ranked list never mixes versions.
 - **The audit log and the deletion record carry no personal data.** `AuditEvent.meta` holds ids, codes, stages, bands and counts. `DeletionRecord` holds the candidate code, the reason and counts. A weekly sample review copies the band, decision and requisition number onto itself, so a verdict survives the application being erased.
 
+```mermaid
+erDiagram
+  direction LR
+  Client ||--o{ User : employs
+  Client ||--o{ Requisition : owns
+  User ||--o{ Requisition : "owns (recruiter)"
+  User ||--o{ Session : has
+  User ||--o{ AuditEvent : acts
+  Requisition ||--o| Scorecard : "has one"
+  Scorecard ||--o{ Criterion : lists
+  Requisition ||--o{ UploadBatch : receives
+  Requisition ||--o{ Application : ranks
+```
+
+```mermaid
+erDiagram
+  direction LR
+  Candidate ||--o{ CvDocument : "appears in"
+  CvDocument ||--o| ConsentRecord : "attested by"
+  CvDocument ||--o{ DuplicateLink : "flagged as"
+  Candidate ||--o{ Application : "applies as"
+  Application ||--o{ CandidateScore : "scored per version"
+  Application ||--o{ InterviewSlot : proposes
+```
+
 **What is deliberately not stored as data:** gender, date of birth, age, marital status, parents' names, religion, caste, nationality, passport details, languages known and photo captions. The profile has no column for them, `redactedText` removes them before anything reaches the model or a client, and no scoring input uses them. We are precise about the limit: the original file and the raw extracted text are kept so a recruiter can read the CV as the candidate wrote it, so those items still exist inside the file. They are never copied into a field, a prompt or a client response. A photograph stays inside the PDF and is never extracted.
 
 ## 6. The hard part: parsing varied CVs in bulk
-
-![Duplicate comparison: this CV against the one already on file](screenshots/cv/duplicate-comparison-desktop.jpg)
 
 ### The pipeline
 
@@ -192,7 +178,7 @@ Most misses are one file, the rough scan (OCR confidence 57), where the phone, e
 
 ## 7. Scoring that can be checked
 
-![Ranked list with notice, CTC and location flags](screenshots/scoring/ranked-list-desktop.jpg)
+![The ranked list with notice, CTC, location and scan flags, the client answer and proposed times](screenshots/portal/recruiter-stage-strip-desktop.jpg)
 
 ### The AI judges, code scores
 
@@ -207,6 +193,8 @@ For each criterion on a confirmed scorecard the model returns only a verdict (me
 A met criterion earns its whole share and a partial one half. Experience is full inside the range, falls in a straight line to zero two years outside it, and is half when the CV does not state it. A group with no criteria passes its points on: with no nice-to-haves the must-haves hold 90. The total is rounded and out of 100.
 
 **No points without a verified quote.** Each quote is looked up in the redacted CV text that was sent, ignoring case, spacing and punctuation. A met or partial verdict with no quote found becomes "not found" and the row is flagged "The AI cited text that is not in the CV". On the 45-CV corpus 224 of 224 quotes verified, so the downgrade path is covered by tests, not by a live example.
+
+![The CV viewer: verified quotes marked in the text, the breakdown beside it](screenshots/scoring/cv-viewer-evidence-desktop.jpg)
 
 **Bands.** Strong match is 75 or more with no must-have missing (a partial must-have is allowed). Possible match is 50 or more. Weak is below 50. The band rule changed after a review. The first rule needed every must-have fully met, which made Strong rare: only 9 of 19 candidates the ground truth calls strong were banded Strong, mainly because must-haves such as "Communication" are hard to quote from a CV. Two changes followed. The band rule allows a partial must-have, and extraction now flags a must-have that a CV cannot evidence with "Hard to check from a CV, consider making it a nice-to-have". After both, 16 of 19 expected-strong candidates are banded Strong (below). `npm run db:reband` applies a changed rule to stored scores from their stored criteria, with no model call.
 
@@ -258,7 +246,7 @@ Each score stores the scorecard version it used. Confirming a changed scorecard 
 
 ## 8. Recruiter and client workflow
 
-![Client candidate page at 375px: the recruiter's note, evidence with quotes, flags](screenshots/portal/candidate-375.jpg)
+<img src="screenshots/portal/candidate-375.jpg" alt="Client candidate page at 375px: the recruiter's note and the evidence with quotes" align="right" width="190">
 
 ### From upload to submission
 
@@ -286,7 +274,7 @@ A client can shortlist, reject with a reason (skills gap, experience, notice per
 
 The insights page answers the question a delivery head actually has: is the AI helping, and where is it wrong?
 
-**Agreement.** Each recruiter and client decision is audited with the AI band, total and score source at that moment. The recruiter and the AI agree when a Strong or Possible match is screened, or a Weak match is turned down. The rate is agreed decisions over all scored screening decisions (screened plus not a fit). Decisions on candidates with no score are shown but left out of the rate. The page opens with one sentence, for example "This week the AI and recruiters agreed on 34 of 41 screening decisions." Because the band is read from the audit event written at decision time, a later re-score cannot rewrite history.
+**Agreement.** Each recruiter and client decision is audited with the AI band, total and score source at that moment. The recruiter and the AI agree when a Strong or Possible match is screened, or a Weak match is turned down. The rate is agreed decisions over all scored screening decisions (screened plus not a fit). Decisions on candidates with no score are shown but left out of the rate. The page opens with one sentence, for example "This week the AI and recruiters agreed on 8 of 10 screening decisions." (the seeded week of 2 to 8 November). Because the band is read from the audit event written at decision time, a later re-score cannot rewrite history.
 
 **Disagreements.** A Strong match turned down, with the reason, or a Weak match that was screened, submitted or shortlisted by the client. Each row opens the CV viewer.
 

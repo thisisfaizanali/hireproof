@@ -1,0 +1,17 @@
+{
+  "name": "@hireproof/docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "pdf": "node src/pdf.mjs"
+  },
+  "dependencies": {
+    "@fontsource/red-hat-display": "^5.2.7",
+    "@fontsource/red-hat-mono": "^5.2.7",
+    "@fontsource/red-hat-text": "^5.2.8",
+    "marked": "^16.4.2",
+    "mermaid": "^11.12.2",
+    "playwright": "^1.64.1"
+  }
+}
