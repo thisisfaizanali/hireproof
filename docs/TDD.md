@@ -332,7 +332,7 @@ The 120b model is the one that quotes faithfully (the 20b model returned null qu
 
 ## 12. Testing and quality
 
-There are 376 tests in 31 files, Vitest and Supertest against a real Postgres (a separate `_test` database that the setup creates and migrates). They are written to prove the rules that matter, not to chase coverage.
+There are 758 tests in 31 files, Vitest and Supertest against a real Postgres (a separate `_test` database that the setup creates and migrates). They are written to prove the rules that matter, not to chase coverage.
 
 | Area             | What the tests establish                                                                                                                                        |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
