@@ -140,13 +140,13 @@ SMOKE_PASSWORD='DEMO_PASSWORD' npm run smoke -- --web https://YOUR-APP.vercel.ap
 
 Every line should say `pass` and the last line should be `All checks passed`. Any failure is listed at the end and the command exits with an error.
 
-**Do one manual comparison.** Near the end, the test prints a line like `latest sign-in address is not a private or proxy one (203.0.x.x)`. That is the address the API recorded for the sign-in the test just made, with the last two numbers hidden. Search "what is my IP" in a browser. The first two numbers must match. If they do not, `TRUST_PROXY` is wrong; see Troubleshooting.
+**Do one manual comparison.** Near the end, the test prints a line like `latest sign-in address is the browser's, not a private or proxy one (203.0.x.x)`. That is the address the API recorded for the sign-in the test just made, with the last two numbers hidden. Search "what is my IP" in a browser. The first two numbers must match. If they do not, `TRUST_PROXY` is wrong; see Troubleshooting.
 
 Then open the Vercel address in a browser and sign in as each of the three roles once.
 
 ## 6. What reviewers should know
 
-Put these in the README you submit.
+The README states these. Keep it in step with this section when something changes, and replace the `{{WEB_URL}}` and `{{DEMO_PASSWORD}}` placeholders in it once the deployment exists.
 
 **Demo logins.** The login page has one-click buttons. The accounts, all with the same password, are:
 
@@ -158,9 +158,11 @@ Put these in the README you submit.
 | `priya.nair@kestrelinfotech.test`     | Hiring manager |
 | `arjun.kulkarni@sahyadrifinserv.test` | Hiring manager |
 
-Password: `<DEMO PASSWORD, add it to the README at submission>`.
+Password: the `DEMO_PASSWORD` you chose in step 2, which is also the value of `NEXT_PUBLIC_DEMO_PASSWORD` in Vercel.
 
 **The first load can be slow.** Render's free plan puts the API to sleep after 15 minutes without traffic. Waking takes up to about a minute. The login page says "Starting the server" when that happens; after that everything is quick. Neon also sleeps its database after a few idle minutes and wakes in about a second.
+
+**Sign-ins lock after repeated mistakes.** Five failed attempts on one account lock it for 15 minutes, and ten failed attempts from one address lock that address for the same time. The lock also blocks the right password until the 15 minutes pass. For the demo, the remedy is to wait, or to use the other recruiter (`rohan.mehta@hireproof.test`).
 
 **The AI has a daily cap.** On Groq's free plan the larger model allows about 200,000 tokens a day. When it runs out, or when no key is set, scorecards and scoring fall back to rules and are labelled "Scored without AI" or "pattern matching". Nothing fails; the results are simply plainer.
 
@@ -196,7 +198,7 @@ DATABASE_URL='PASTE_THE_NEON_STRING_HERE' SEED_DEMO_PASSWORD='DEMO_PASSWORD' npm
 
 **The audit log shows the same address for everyone, or the smoke test says the address is private, or the masked address does not match yours.** `TRUST_PROXY` is wrong. If the recorded address is one of Vercel's or Render's, raise it by one (for example `5`). If it is a nonsense address that you do not recognise from far outside your network, lower it. Change it in Render's Environment tab, let it redeploy, and run the smoke test again.
 
-**Sign-in gets "Too many failed attempts".** The limiter allows ten failed attempts per address in 15 minutes. If `TRUST_PROXY` is too low the limiter counts every visitor as one address, which shows up as this error for everyone. Fix `TRUST_PROXY` as above, or wait 15 minutes.
+**Sign-in gets "Too many failed attempts".** There are two limits, both counting failed attempts only and both over 15 minutes: 10 per address and 5 per account (per email). If one account is locked, the other accounts still work, so wait 15 minutes or use another login. If everyone gets the error, `TRUST_PROXY` is probably too low, so the limiter counts every visitor as one address. Fix `TRUST_PROXY` as above, or wait 15 minutes.
 
 **The AI does not seem to be used.** On a requisition the scorecard says "pattern matching", or scores say "Scored without AI". Check `LLM_API_KEY` is set in Render (a blank value counts as not set), that the key is valid, and that the daily cap has not been used. The key is never shown in the app; the API log says "AI not configured" or the provider's error.
 
@@ -265,9 +267,4 @@ DATABASE_URL='postgresql://hireproof:hireproof_local_only@localhost:5432/hirepro
 
 ## What would change at real scale
 
-- **A worker process.** The queue runs inside the API. At real volume, put it in its own service so heavy OCR cannot slow requests, and scale the two separately.
-- **Object storage for files.** CVs are stored in Postgres. Move them to S3 or similar and keep only a key in the database; candidate deletion would then remove the object as well as the row.
-- **A pooled connection for the API.** Keep the direct connection for migrations and the queue, and give the request-handling code a pooled one so many instances can share the database's connection limit.
-- **A paid, always-on instance.** No sleeping means no first-load wait, and more memory means a higher `CV_CONCURRENCY`.
-- **Scheduled retention.** The Data page lists candidates past the retention period; a scheduled job should delete them.
-- **Real email.** Messages to candidates and clients are recorded, not sent.
+The design document lists them in section 14: a separate worker process, object storage for CV files, a pooled connection for requests, an always-on instance, a scheduled retention job, real messaging and calendar, an audit export, candidate access requests, per-tenant model budgets and a CAPTCHA after lockout. See [Hireproof-TDD.pdf](Hireproof-TDD.pdf) or [TDD.md](TDD.md).
