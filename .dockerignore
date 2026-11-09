@@ -16,6 +16,9 @@ tools/*
 !tools/corpus
 tools/corpus/*
 !tools/corpus/package.json
+!tools/docs
+tools/docs/*
+!tools/docs/package.json
 docs
 **/test
 **/screenshots
