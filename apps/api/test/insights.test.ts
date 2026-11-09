@@ -408,6 +408,12 @@ describe("top ten overlap", () => {
         "SOURCED",
         `Ranked ${i + 1}`,
       );
+      // The overlap only counts people who existed by the end of the week, so
+      // they are dated inside it whatever day the test runs.
+      await prisma.application.update({
+        where: { id: made.application.id },
+        data: { createdAt: tuesday() },
+      });
       // Totals fall by rank, so rank 1 is the highest.
       await prisma.candidateScore.updateMany({
         where: { applicationId: made.application.id },
