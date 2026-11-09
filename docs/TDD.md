@@ -1,6 +1,6 @@
 # Hireproof: technical design
 
-Live app: {{WEB_URL}} | API health: {{API_URL}}/api/health | Source: github.com/thisisfaizanali/hireproof
+Live app: https://hireproof-ten.vercel.app | API health: https://hireproof-api-t944.onrender.com/api/health | Source: github.com/thisisfaizanali/hireproof
 
 ## 1. Summary
 
@@ -14,7 +14,7 @@ There are three users, and each gets a different view of the same data.
 | Client hiring manager | Reads submitted candidates on a phone, with evidence and a band, shortlists, rejects with a reason, proposes interview times                                             | Contact details, the 0 to 100 number, other clients' data, anything not submitted |
 | Delivery head         | Reads everything, checks each week whether the AI and recruiters agree, reviews a sample of decisions, reads the audit log, erases candidates on request or at retention | Any change to requisitions, scores or stages                                      |
 
-What is live at {{WEB_URL}}: the web app on Vercel, the API on Render, Postgres on Neon, and Groq as the model provider. The database holds three fictional client companies, five demo users, four requisitions made from four sample job descriptions, and about 45 sample CVs with scores, submissions, interview times and two weeks of decisions. Messages to candidates and clients are recorded but not sent (A5).
+What is live at https://hireproof-ten.vercel.app: the web app on Vercel, the API on Render, Postgres on Neon, and Groq as the model provider. The database holds three fictional client companies, five demo users, four requisitions made from four sample job descriptions, and about 45 sample CVs with scores, submissions, interview times and two weeks of decisions. Messages to candidates and clients are recorded but not sent (A5).
 
 ## 2. The problem as we read it
 
@@ -359,7 +359,7 @@ The web app has no automated tests. Its behaviour is checked through the API tes
 
 Three free services: Vercel for the web app (`sin1`), Render for the API as a Docker container (Singapore), and Neon for Postgres (Singapore). `render.yaml` is a Blueprint, and `docs/deployment.md` is the step-by-step guide. The API applies pending migrations on start (Render's free plan has no pre-deploy step, and `migrate deploy` is idempotent and locks). It uses Neon's direct, unpooled connection because Prisma Migrate and pg-boss rely on locks and session state that a pooler breaks, and traffic is a handful of reviewers.
 
-**`TRUST_PROXY` is 4.** The audit log and the per-address login limit need the browser's address, which arrives in `X-Forwarded-For`. The chain is browser, Vercel, Render's front door, container. Express reads the list from the right and skips as many entries as `TRUST_PROXY` says are trusted. Too low and Express stops on a proxy's address, so everyone shares one limiter bucket. Too high and a visitor can forge their address. Reports from people running Express on Render alone give 3, and Vercel adds one. We worked this from published behaviour and could not measure it from the repository, so the smoke test prints the recorded address masked to /16 for comparison with your own. The per-account limit (section 10) means a wrong value cannot open a hole in password guessing.
+**`TRUST_PROXY` is 4.** The audit log and the per-address login limit need the browser's address, which arrives in `X-Forwarded-For`. The chain is browser, Vercel, Render's front door, container. Express reads the list from the right and skips as many entries as `TRUST_PROXY` says are trusted. Too low and Express stops on a proxy's address, so everyone shares one limiter bucket. Too high and a visitor can forge their address. Reports from people running Express on Render alone give 3, and Vercel adds one. We first worked the value out from published behaviour, then confirmed it on the live stack: the address the audit log recorded for a sign-in matched the tester's own public address in its first two octets (the smoke test masks it to /16 for exactly this comparison). It was confirmed, not just estimated. The per-account limit (section 10) means a wrong value cannot open a hole in password guessing.
 
 **Memory.** The free instance has 512 MB. We measured the container with `docker stats` under a 512 MB limit, uploading 10 PDFs at once (7 text, 3 scans).
 
@@ -370,13 +370,19 @@ Three free services: Vercel for the web app (`sin1`), Render for the API as a Do
 
 Idle is about 160 MiB. Before capping the heap (`--max-old-space-size=192`) and setting `MALLOC_ARENA_MAX=2`, concurrency 1 peaked at 506 MiB. Two at a time leaves about 10% headroom, so `render.yaml` sets 1; the code default is 2 for larger machines.
 
-**Cold start (A10).** Render's free plan stops a service after 15 minutes without traffic, and waking takes up to about a minute; this is the provider's documented behaviour and we have not timed the hosted wake-up beyond what the smoke output below shows. Neon also pauses its compute after idle; the deploy guide puts the resume at about a second, which we did not time. The login page says "Starting the server" instead of failing, the web server waits up to 60 seconds for the session check, the database connect timeout in production is 10 seconds so a sleeping Neon can wake, and the smoke test waits up to two minutes.
+**Cold start (A10).** Render's free plan stops a service after 15 minutes without traffic, and waking takes up to about a minute; this is the provider's documented behaviour and we have not timed the hosted wake-up. Neon also pauses its compute after idle; the deploy guide puts the resume at about a second, which we did not time. The login page says "Starting the server" instead of failing, the web server waits up to 60 seconds for the session check, the database connect timeout in production is 10 seconds so a sleeping Neon can wake, and the smoke test waits up to two minutes.
 
-**The smoke test** (`npm run smoke -- --web <url>`) signs in as the demo users and checks each role's main screens, the security headers, the cookie flags, the CV file headers, the leak checks for both clients, a 404 on another client's application, and the address the audit log recorded. A run against the local compose stack passed all 33 checks. Against the hosted stack:
+**The smoke test** (`npm run smoke -- --web <url>`) signs in as the demo users and checks each role's main screens, the security headers, the cookie flags, the CV file headers, the leak checks for both clients, a 404 on another client's application, and the address the audit log recorded. Run against the live site on 9 November 2026, it passed all 36 checks:
 
-```
-{{SMOKE_OUTPUT}}
-```
+| Group                  | Checks | What they cover                                                                                                                                                  |
+| ---------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Health                 | 2      | The API answers with the database up; hardening headers on the API                                                                                               |
+| Web headers            | 7      | The login page loads; nosniff, Referrer-Policy, X-Frame-Options, Permissions-Policy, Content-Security-Policy and HSTS are set                                    |
+| Recruiter              | 8      | Sign-in; the session cookie is HttpOnly, SameSite=Lax, host-only and Secure; requisitions, a ranked list, a score breakdown, the CV file and its headers         |
+| Client hiring managers | 15     | Both clients sign in and see their own submissions; no email, no 10-digit phone number and no total score in any response; another client's application is a 404 |
+| Delivery head          | 4      | Sign-in, insights, the audit log, and the recorded sign-in address                                                                                               |
+
+The last check is the one that confirms `TRUST_PROXY`. The address the audit log recorded for the test's own sign-in matched the tester's public address in its first two octets, so the chain from browser to Vercel to Render resolves to the visitor with a value of 4.
 
 ## 14. What we would do next at real scale
 
@@ -399,18 +405,12 @@ Idle is about 160 MiB. Before capping the heap (`--max-old-space-size=192`) and 
 - **Rules-only parsing is weak on role and location.** 56% and 62% on the 45 CVs. Without a key, a recruiter sees "Parsed without AI, check name and role" on every CV.
 - **Strong precision is 80%.** Four of the 20 CVs banded Strong are expected-partial. The KYC and retail scorecards hold must-haves such as "Graduate" that CVs rarely quote, so few candidates there can reach Strong by the all-must-haves rule.
 - **Experience from dates** misses 2 of 45 CVs, flagged where the date figure and the CV's own figure differ.
-- **Demo-account lockout.** Five failed attempts on a published account lock it for 15 minutes (section 10). The remedy is to wait or use the other recruiter.
-- **Cold start** of up to about a minute on first use after idle (A10).
+- **Demo-account lockout and cold start.** Five failed attempts on a published account lock it for 15 minutes (section 10); the remedy is to wait or use the other recruiter. The first request after idle can take up to about a minute (A10).
 - **The 500 CV batch is enforced but not run.** The largest batch we ran was the 45 sample CVs and 6 edge files in one upload. Memory and timing were measured on 10 files. Time and token figures for 500 are arithmetic (section 11).
 - **Budgets we did not measure.** We know the 120b daily budget (200,000 tokens). We did not measure the 20b model's daily budget, and we measured no paid tier.
-- **Consent is an attestation**, not proof from the candidate (A6). Batches from before consent was recorded refuse new files.
-- **Retention is manual.** Nothing is deleted without a person (section 14).
-- **`TRUST_PROXY` was not measured** on the hosted stack (section 13).
-- **Top-10 overlap uses today's scores**, because earlier ranks are not stored (section 9).
+- **Consent is an attestation**, not proof from the candidate (A6), and retention is manual: nothing is deleted without a person (section 14). Top-10 overlap uses today's scores, because earlier ranks are not stored (section 9).
 - **Uploads are not virus scanned.** Files are type-checked by magic bytes, are never executed, and are served with a strict policy, but no scanner runs.
-- **Rules scorer and non-dictionary criteria.** A criterion that is not in the 56-skill dictionary gets no credit from the rules fallback.
 - **Messaging and calendar are mocked** (A4, A5).
-- **The CSP allows inline script and style**, because Next writes its own.
 
 ## 16. How this was built
 

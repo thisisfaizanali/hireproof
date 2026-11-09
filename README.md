@@ -2,11 +2,11 @@
 
 Hireproof is a resume screening tool for a staffing firm. A recruiter turns a job description into a confirmed scorecard, drops in a batch of CVs (PDF, DOCX, scans), and gets a ranked list where every point is backed by a sentence quoted from the CV and checked in code. Client hiring managers see the submitted candidates on their phones, with the evidence and without contact details. A delivery head sees whether the AI and the recruiters agree.
 
-**Live app:** {{WEB_URL}}
+**Live app:** https://hireproof-ten.vercel.app
 
 ## Sign in
 
-Every account uses the same password: `{{DEMO_PASSWORD}}`. The login page also has one-click buttons.
+Every account uses the same password: `Hireproof-Demo-2026`. The login page also has one-click buttons.
 
 | Email                                 | Role                             | Try this                                                                                                                     |
 | ------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -25,7 +25,7 @@ Every account uses the same password: `{{DEMO_PASSWORD}}`. The login page also h
 1. **Ranked list and evidence.** Sign in as Ananya. Open the Senior Java Developer requisition and its Candidates tab. The list is ranked, with notice, CTC and location shown as flags that never change the score. Open "Why this score" on the top row: each criterion has a verdict, its points and the quotes found in the CV.
 2. **The CV viewer.** Open a candidate. Switch between the original and the text. The verified quotes are marked in the text. "Mark screened" stays disabled until the CV has been opened, and the server enforces the same rule.
 3. **The scorecard.** Back on the requisition, open the Scorecard tab. Each requirement shows its source quote in the job description, and items the AI was unsure about wait for a "Looks right" before the scorecard can be confirmed.
-4. **Upload.** On Candidates, tick the consent statement, pick a source, and add a few files from `samples/cvs` (the three `scan` files go through OCR). Watch each file move from Queued to Done. Files that are already in the demo are recognised as duplicates, and the duplicate review says why.
+4. **Upload (optional).** The seeded data already shows every feature, so skip this if you are short of time. Uploading uses the shared daily AI budget and takes about 90 seconds per 10 CVs on the free tier. To try it, go to Candidates, tick the consent statement, pick a source, and add a few files from `samples/cvs` (the three `scan` files go through OCR). Watch each file move from Queued to Done. Files that are already in the demo are recognised as duplicates, and the duplicate review says why.
 5. **The client's side.** Sign out and sign in as Priya Nair, ideally at 375px wide. She sees submitted candidates, the recruiter's note, the evidence and a band label, and no email, phone or score out of 100. Propose a time, then sign back in as Ananya and confirm it. The message to the candidate is recorded, not sent.
 6. **The delivery head.** Sign in as Vikram Rao. Insights shows where the AI and the recruiters agreed that week, the ten decisions to review, and the health of the AI. The Audit log reads as sentences, and the Data page lists candidates past their retention date.
 
@@ -46,21 +46,21 @@ cd hireproof
 cp .env.example .env
 ```
 
-`.env.example` lists the variable names. Fill `.env` with these values. They are for local development only and must not be used anywhere else:
+`.env.example` lists the variable names. Fill `.env` with the values below, and choose your own passwords where you see angle brackets. They are for local development only:
 
 ```bash
 PORT=4000
-DATABASE_URL=postgresql://hireproof:hireproof_local_only@localhost:5432/hireproof
+DATABASE_URL=postgresql://hireproof:<your POSTGRES_PASSWORD>@localhost:5432/hireproof
 API_INTERNAL_URL=http://localhost:4000
 
 POSTGRES_USER=hireproof
-POSTGRES_PASSWORD=hireproof_local_only
+POSTGRES_PASSWORD=<a password of your choice>
 POSTGRES_DB=hireproof
 POSTGRES_PORT=5432
 
-SEED_DEMO_PASSWORD=demo-pass-local-1
+SEED_DEMO_PASSWORD=<a password of your choice>
 NEXT_PUBLIC_DEMO_LOGINS=true
-NEXT_PUBLIC_DEMO_PASSWORD=demo-pass-local-1
+NEXT_PUBLIC_DEMO_PASSWORD=<the same value as SEED_DEMO_PASSWORD>
 ```
 
 Then:
@@ -73,7 +73,7 @@ npm run db:seed
 npm run dev
 ```
 
-The web app is on http://localhost:3000 and the API on http://localhost:4000. The browser only talks to the web origin, which forwards `/api` to the API. If port 5432 is taken, set `POSTGRES_PORT` in `.env` and use the same port in `DATABASE_URL`. The local password is `demo-pass-local-1`, the value of `SEED_DEMO_PASSWORD`.
+The web app is on http://localhost:3000 and the API on http://localhost:4000. The browser only talks to the web origin, which forwards `/api` to the API. If port 5432 is taken, set `POSTGRES_PORT` in `.env` and use the same port in `DATABASE_URL`. Locally, every demo user signs in with whatever `SEED_DEMO_PASSWORD` is set to in `.env`.
 
 **Everything in Docker, without installing Node packages for the apps:**
 

@@ -146,7 +146,7 @@ Then open the Vercel address in a browser and sign in as each of the three roles
 
 ## 6. What reviewers should know
 
-The README states these. Keep it in step with this section when something changes, and replace the `{{WEB_URL}}` and `{{DEMO_PASSWORD}}` placeholders in it once the deployment exists.
+The README states these. Keep it in step with this section when something changes, including the web address and the demo password.
 
 **Demo logins.** The login page has one-click buttons. The accounts, all with the same password, are:
 
@@ -217,7 +217,7 @@ How to read the number:
 - Too low: Express stops on a proxy's address. The audit log and the limiter see Vercel or Render, not the visitor, and everyone shares one limiter bucket.
 - Too high: Express runs past the real client into text the visitor typed. They could write any address in `X-Forwarded-For` and be believed.
 
-The value was worked out from published behaviour, because the hosted stack cannot be reached from the repository, so the smoke test (step 5) and the comparison with your own address are what confirm it. The setting is read as a hop count (`TRUST_PROXY`, default `1`, which is correct for one proxy such as the local Docker setup).
+The value was first worked out from published behaviour, and was then confirmed on the live deployment: the smoke test (step 5) recorded an address whose first two octets matched the tester's own public address. Repeat that comparison after any change to the hosting chain. The setting is read as a hop count (`TRUST_PROXY`, default `1`, which is correct for one proxy such as the local Docker setup).
 
 The value only affects which address the audit log records and the per-address limit on failed sign-ins. Password guessing is also capped per account (5 failures per email in 15 minutes), so a wrong hop count or a forged header cannot get around it.
 
@@ -258,7 +258,7 @@ The database starts empty. Load the demo data from your machine, with the same v
 
 ```bash
 npm install
-DATABASE_URL='postgresql://hireproof:hireproof_local_only@localhost:5432/hireproof' npm run db:seed
+DATABASE_URL='postgresql://hireproof:<POSTGRES_PASSWORD>@localhost:5432/hireproof' npm run db:seed
 ```
 
 (Use your `POSTGRES_PORT` in the URL if you changed it.) Then open the web address and use the quick-login buttons. Use Chrome, Edge or Firefox: the cookie is marked secure, which those browsers accept on `localhost` over plain http, and Safari does not.

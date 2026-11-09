@@ -64,7 +64,7 @@ th { text-align:left; font-weight:700; border-bottom:1pt solid var(--ink); paddi
 td { vertical-align:top; padding:.9mm 1.4mm; border-bottom:.5pt solid var(--rule); }
 tr { break-inside:avoid; }
 thead { display:table-header-group; }
-img { display:block; max-width:125mm; max-height:80mm; margin:2mm auto 2mm; border:.5pt solid var(--rule); }
+img { display:block; max-width:118mm; max-height:74mm; margin:2mm auto 2mm; border:.5pt solid var(--rule); }
 img[align=right] { float:right; max-width:none; max-height:none; width:52mm; margin:0 0 2mm 5mm; }
 .mermaid { text-align:center; margin:2mm 0 3mm; break-inside:avoid; }
 .mermaid svg { max-width:100%; max-height:95mm; height:auto; }
